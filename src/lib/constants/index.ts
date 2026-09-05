@@ -37,21 +37,21 @@ export function getRiskColor(score: number): string {
 
 // --- Alert Level Colors ---
 export const ALERT_COLORS: Record<AlertLevel, { color: string; bgColor: string; icon: string }> = {
-  CRITICAL: { color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.15)', icon: '🔴' },
-  HIGH:     { color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.15)', icon: '🟠' },
-  MEDIUM:   { color: '#eab308', bgColor: 'rgba(234, 179, 8, 0.15)',  icon: '🟡' },
-  LOW:      { color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.15)', icon: '🔵' },
-  INFO:     { color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.15)', icon: 'ℹ️' },
+  CRITICAL: { color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.15)', icon: '●' },
+  HIGH:     { color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.15)', icon: '●' },
+  MEDIUM:   { color: '#eab308', bgColor: 'rgba(234, 179, 8, 0.15)',  icon: '●' },
+  LOW:      { color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.15)', icon: '●' },
+  INFO:     { color: '#8b5cf6', bgColor: 'rgba(139, 92, 246, 0.15)', icon: '●' },
 };
 
 // --- Commodity Icons & Labels ---
 export const COMMODITY_CONFIG: Record<CommodityType, { label: string; icon: string; color: string }> = {
-  MEDICINE:              { label: 'Medicine',              icon: '💊', color: '#ef4444' },
-  FOOD:                  { label: 'Food',                  icon: '🍚', color: '#f97316' },
-  EMERGENCY_SUPPLIES:    { label: 'Emergency Supplies',    icon: '🚑', color: '#dc2626' },
-  AGRICULTURAL_PRODUCE:  { label: 'Agricultural Produce',  icon: '🌾', color: '#22c55e' },
-  CONSTRUCTION_MATERIAL: { label: 'Construction Material', icon: '🏗️', color: '#6366f1' },
-  OTHER:                 { label: 'Other',                 icon: '📦', color: '#8b5cf6' },
+  MEDICINE:              { label: 'Medicine',              icon: 'MED',  color: '#ef4444' },
+  FOOD:                  { label: 'Food',                  icon: 'FOOD', color: '#f97316' },
+  EMERGENCY_SUPPLIES:    { label: 'Emergency Supplies',    icon: 'EMRG', color: '#dc2626' },
+  AGRICULTURAL_PRODUCE:  { label: 'Agricultural Produce',  icon: 'AGRI', color: '#22c55e' },
+  CONSTRUCTION_MATERIAL: { label: 'Construction Material', icon: 'MAT',  color: '#6366f1' },
+  OTHER:                 { label: 'Other',                 icon: 'GEN',  color: '#8b5cf6' },
 };
 
 // --- Priority Config ---
@@ -114,17 +114,21 @@ export const DEFAULT_RISK_WEIGHTS = {
 
 // --- Map Layer IDs ---
 export const MAP_LAYERS = [
-  { id: 'roads',           label: 'Roads',              icon: '🛣️',  defaultOn: true },
-  { id: 'bridges',         label: 'Bridges',            icon: '🌉',  defaultOn: true },
-  { id: 'districts',       label: 'Districts',          icon: '📍',  defaultOn: false },
-  { id: 'vehicles',        label: 'Vehicles',           icon: '🚛',  defaultOn: true },
-  { id: 'incidents',       label: 'Incidents',          icon: '⚠️',  defaultOn: true },
-  { id: 'weather',         label: 'Weather',            icon: '🌧️',  defaultOn: false },
-  { id: 'floodZones',      label: 'Flood Zones',        icon: '🌊',  defaultOn: false },
-  { id: 'landslideZones',  label: 'Landslide Zones',    icon: '⛰️',  defaultOn: false },
-  { id: 'warehouses',      label: 'Warehouses',         icon: '🏭',  defaultOn: true },
-  { id: 'hospitals',       label: 'Hospitals',          icon: '🏥',  defaultOn: true },
-  { id: 'emergencyCorridors', label: 'Emergency Corridors', icon: '🚨', defaultOn: false },
+  { id: 'roads',           label: 'Roads',              icon: '●',  defaultOn: true },
+  { id: 'bridges',         label: 'Bridges',            icon: '●',  defaultOn: true },
+  { id: 'districts',       label: 'Districts',          icon: '●',  defaultOn: false },
+  { id: 'vehicles',        label: 'Vehicles',           icon: '●',  defaultOn: true },
+  { id: 'incidents',       label: 'Incidents',          icon: '●',  defaultOn: true },
+  { id: 'weather',         label: 'Weather',            icon: '●',  defaultOn: false },
+  { id: 'floodZones',      label: 'Flood Zones',        icon: '●',  defaultOn: false },
+  { id: 'landslideZones',  label: 'Landslide Zones',    icon: '●',  defaultOn: false },
+  { id: 'warehouses',      label: 'Warehouses',         icon: '●',  defaultOn: true },
+  { id: 'hospitals',       label: 'Hospitals',          icon: '●',  defaultOn: true },
+  { id: 'emergencyCorridors', label: 'Emergency Corridors', icon: '●', defaultOn: false },
+  { id: 'satelliteObservations', label: 'Satellite Observations', icon: '●', defaultOn: true },
+  { id: 'sentinel1Flood',  label: 'Sentinel-1 SAR Flood', icon: '●', defaultOn: true },
+  { id: 'sentinel2Optical', label: 'Sentinel-2 Optical', icon: '●', defaultOn: false },
+  { id: 'satelliteChanges', label: 'Satellite Changes', icon: '●', defaultOn: true },
 ];
 
 // --- App Metadata ---

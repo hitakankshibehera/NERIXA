@@ -218,6 +218,8 @@ export interface RiskWeights {
   traffic: number;
 }
 
+export type WeatherCondition = 'CLEAR' | 'CLOUDY' | 'RAIN' | 'HEAVY_RAIN' | 'STORM' | 'FOG';
+
 export interface WeatherData {
   id: string;
   districtId: string;
@@ -230,7 +232,7 @@ export interface WeatherData {
   rainfallForecast24h: number;
   windSpeed: number; // km/h
   visibility: number; // km
-  condition: 'CLEAR' | 'CLOUDY' | 'RAIN' | 'HEAVY_RAIN' | 'STORM' | 'FOG';
+  condition: WeatherCondition;
   updatedAt: string;
 }
 
@@ -285,11 +287,22 @@ export interface Incident {
   districtId: string;
   stateId: string;
   description: string;
+  imageUrl?: string;
   photoBase64?: string;
   reportedBy: string;
   reportedAt: string;
   status: 'REPORTED' | 'VERIFIED' | 'ASSIGNED' | 'RESOLVED' | 'REJECTED';
   assignedTo?: string;
+  droneRecon?: {
+    droneId: string;
+    altitude: number; // meters
+    captureTime: string;
+    debrisVolume?: number; // cubic meters
+    blockedLengthMeters?: number;
+    clearanceMachinery?: string[];
+    alternateRoute?: string;
+    liveFeedAvailable?: boolean;
+  };
   aiAnalysis?: IncidentAIAnalysis;
   roadBlockagePercent?: number;
   verifiedAt?: string;
@@ -305,6 +318,8 @@ export interface IncidentAIAnalysis {
   affectedShipments: number;
   estimatedClearTime: string;
   recommendations: string[];
+  debrisVolume?: string;
+  clearancePhase?: string;
 }
 
 // --- Alerts ---
