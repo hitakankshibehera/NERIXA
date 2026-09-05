@@ -53,6 +53,20 @@ import {
 // Dynamically import map to avoid SSR issues with Leaflet
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false, loading: () => <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-tertiary)' }}><div className="loading-spinner" /></div> });
 
+import LiveHazardTicker from '@/components/hazards/LiveHazardTicker';
+import LiveRegionalHazardMonitor from '@/components/hazards/LiveRegionalHazardMonitor';
+import {
+  INITIAL_FLOOD_ZONES,
+  INITIAL_BRIDGES,
+  INITIAL_ACCIDENTS,
+  INITIAL_HIGHWAYS,
+  simulateLiveHazardStep,
+  type LiveFloodZone,
+  type LiveBridgeStatus,
+  type LiveAccidentAlert,
+  type LiveHighwayStatus,
+} from '@/lib/hazards/liveHazardFeed';
+
 export type PortalRole = 'CUSTOMER' | 'SUPER_ADMIN' | 'STATE_ADMIN' | 'DISTRICT_OFFICER' | 'FIELD_OFFICER' | 'LOGISTICS_OPERATOR';
 
 export interface PortalConfig {
@@ -428,6 +442,8 @@ function Header({
   onOpenTimeline,
   onOpenFieldEvidence,
   onToggleMobileNav,
+  onOpenHazardMonitor,
+  activeHazardsCount,
 }: { 
   onCommanderToggle: () => void; 
   commanderOpen: boolean; 
@@ -439,6 +455,8 @@ function Header({
   onOpenTimeline?: () => void;
   onOpenFieldEvidence?: () => void;
   onToggleMobileNav?: () => void;
+  onOpenHazardMonitor?: () => void;
+  activeHazardsCount?: number;
 }) {
   const {
     user,
@@ -556,6 +574,31 @@ function Header({
       </div>
 
       <div className="header-actions-scroll">
+        {/* Live Regional Hazard Monitor Trigger */}
+        {onOpenHazardMonitor && (
+          <button
+            className="btn btn-sm"
+            onClick={onOpenHazardMonitor}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: 'rgba(239, 68, 68, 0.45)',
+              color: '#f87171',
+              background: 'rgba(239, 68, 68, 0.14)',
+              fontSize: '0.6875rem',
+              fontWeight: 800,
+              padding: '0.35rem 0.75rem',
+              borderRadius: '6px',
+              boxShadow: '0 0 12px rgba(239, 68, 68, 0.15)',
+            }}
+            title="Open Live Regional Disaster & Highway Monitor (Floods, Bridge Collapses, Accidents)"
+          >
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.2s infinite' }} />
+            <span>LIVE HAZARDS ({activeHazardsCount ?? 4})</span>
+          </button>
+        )}
+
         {/* Section 23: SIH 13-Step Demonstartion Trigger */}
         <button
           className="btn btn-sm"
@@ -1391,6 +1434,14 @@ function DashboardPage({
   onOpenDataSources,
   onOpenTimeline,
   onOpenFieldEvidence,
+  floods,
+  bridgesState,
+  accidentsState,
+  highwaysState,
+  onOpenHazardMonitor,
+  onLocateOnMap,
+  locateTarget,
+  lastSyncSeconds,
 }: {
   onNavigate: (page: string) => void;
   onOpenWeatherModal?: () => void;
@@ -1398,6 +1449,21 @@ function DashboardPage({
   onOpenDataSources?: () => void;
   onOpenTimeline?: () => void;
   onOpenFieldEvidence?: () => void;
+  floods?: LiveFloodZone[];
+  bridgesState?: LiveBridgeStatus[];
+  accidentsState?: LiveAccidentAlert[];
+  highwaysState?: LiveHighwayStatus[];
+  onOpenHazardMonitor?: () => void;
+  onLocateOnMap?: (target: {
+    lat: number;
+    lng: number;
+    title: string;
+    category: 'FLOOD' | 'BRIDGE' | 'ACCIDENT' | 'HIGHWAY';
+    details: string;
+    percentage?: number;
+  }) => void;
+  locateTarget?: any;
+  lastSyncSeconds?: number;
 }) {
   const {
     dashboardSummary,
@@ -1640,6 +1706,21 @@ function DashboardPage({
         </div>
       )}
 
+      {/* ── LIVE REGIONAL DISASTER & HIGHWAY BROADCAST TICKER ── */}
+      {floods && bridgesState && accidentsState && highwaysState && onOpenHazardMonitor && onLocateOnMap && (
+        <div style={{ marginBottom: '8px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+          <LiveHazardTicker
+            floods={floods}
+            bridges={bridgesState}
+            accidents={accidentsState}
+            highways={highwaysState}
+            onOpenMonitor={onOpenHazardMonitor}
+            onLocateOnMap={onLocateOnMap}
+            lastUpdatedSecondsAgo={lastSyncSeconds ?? 3}
+          />
+        </div>
+      )}
+
       {/* ── REALISTIC COMMAND CENTER 3-PANE LAYOUT (Requirement 34) ── */}
       <div
         style={{
@@ -1654,6 +1735,7 @@ function DashboardPage({
         {/* CENTER: LARGE DOMINANT GIS COMMAND MAP */}
         <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', height: '100%' }}>
           <MapView
+            locateTarget={locateTarget}
             onOpenRealityRecon={(camIdx) => {
               setRealityFeedIndex(camIdx ?? 0);
               setRealityModalOpen(true);
@@ -2779,11 +2861,13 @@ function MapPage({
   onOpenWeatherModal,
   onOpenImageIntel,
   onOpenSatelliteIntel,
+  locateTarget,
 }: { 
   onOpenRealityRecon?: (idx?: number) => void; 
   onOpenWeatherModal?: () => void;
   onOpenImageIntel?: () => void;
   onOpenSatelliteIntel?: () => void;
+  locateTarget?: any;
 }) {
   return (
     <div style={{ height: 'calc(100vh - var(--header-height) - 2rem)' }}>
@@ -2793,6 +2877,7 @@ function MapPage({
         onOpenWeatherModal={onOpenWeatherModal}
         onOpenImageIntel={onOpenImageIntel}
         onOpenSatelliteIntel={onOpenSatelliteIntel}
+        locateTarget={locateTarget}
       />
     </div>
   );
@@ -2822,6 +2907,54 @@ export default function NERCommandApp({
   const [timelineModalOpen, setTimelineModalOpen] = useState(false);
   const [fieldEvidenceModalOpen, setFieldEvidenceModalOpen] = useState(false);
 
+  // Live Hazard Feed State (Floods, Bridge Collapses, Accidents, Highways)
+  const [floods, setFloods] = useState<LiveFloodZone[]>(INITIAL_FLOOD_ZONES);
+  const [bridgesState, setBridgesState] = useState<LiveBridgeStatus[]>(INITIAL_BRIDGES);
+  const [accidentsState, setAccidentsState] = useState<LiveAccidentAlert[]>(INITIAL_ACCIDENTS);
+  const [highwaysState, setHighwaysState] = useState<LiveHighwayStatus[]>(INITIAL_HIGHWAYS);
+  const [hazardMonitorOpen, setHazardMonitorOpen] = useState(false);
+  const [locateTarget, setLocateTarget] = useState<{
+    lat: number;
+    lng: number;
+    title: string;
+    category: 'FLOOD' | 'BRIDGE' | 'ACCIDENT' | 'HIGHWAY';
+    details: string;
+    percentage?: number;
+  } | null>(null);
+  const [lastSyncSeconds, setLastSyncSeconds] = useState(2);
+
+  // Periodic Telemetry Simulation Engine (Updates every 1s, sensor step every 8s)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLastSyncSeconds((prev) => {
+        if (prev >= 8) {
+          const step = simulateLiveHazardStep(floods, bridgesState, accidentsState, highwaysState);
+          setFloods(step.floods);
+          setBridgesState(step.bridges);
+          setAccidentsState(step.accidents);
+          setHighwaysState(step.highways);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [floods, bridgesState, accidentsState, highwaysState]);
+
+  const handleLocateOnMap = (target: {
+    lat: number;
+    lng: number;
+    title: string;
+    category: 'FLOOD' | 'BRIDGE' | 'ACCIDENT' | 'HIGHWAY';
+    details: string;
+    percentage?: number;
+  }) => {
+    setLocateTarget(target);
+    if (activePage !== 'dashboard' && activePage !== 'map') {
+      setActivePage('dashboard');
+    }
+  };
+
   const handleOpenReality = (feedIdx = 0) => {
     setRealityFeedIndex(feedIdx);
     setRealityModalOpen(true);
@@ -2850,12 +2983,20 @@ export default function NERCommandApp({
             onOpenDataSources={() => setDataSourcesModalOpen(true)}
             onOpenTimeline={() => setTimelineModalOpen(true)}
             onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
+            floods={floods}
+            bridgesState={bridgesState}
+            accidentsState={accidentsState}
+            highwaysState={highwaysState}
+            onOpenHazardMonitor={() => setHazardMonitorOpen(true)}
+            onLocateOnMap={handleLocateOnMap}
+            locateTarget={locateTarget}
+            lastSyncSeconds={lastSyncSeconds}
           />
         );
       case 'satellite-intel': return <SatelliteIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'image-intel': return <ImageIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'reality': return <RealityReconPage onNavigate={setActivePage} />;
-      case 'map': return <MapPage onOpenRealityRecon={handleOpenReality} onOpenWeatherModal={() => setWeatherModalOpen(true)} onOpenImageIntel={() => setActivePage('image-intel')} onOpenSatelliteIntel={() => setActivePage('satellite-intel')} />;
+      case 'map': return <MapPage onOpenRealityRecon={handleOpenReality} onOpenWeatherModal={() => setWeatherModalOpen(true)} onOpenImageIntel={() => setActivePage('image-intel')} onOpenSatelliteIntel={() => setActivePage('satellite-intel')} locateTarget={locateTarget} />;
       case 'risk': return <RiskPage />;
       case 'routes': return <RoutesPage />;
       case 'simulation': return <SimulationPage />;
@@ -2873,6 +3014,14 @@ export default function NERCommandApp({
             onOpenDataSources={() => setDataSourcesModalOpen(true)}
             onOpenTimeline={() => setTimelineModalOpen(true)}
             onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
+            floods={floods}
+            bridgesState={bridgesState}
+            accidentsState={accidentsState}
+            highwaysState={highwaysState}
+            onOpenHazardMonitor={() => setHazardMonitorOpen(true)}
+            onLocateOnMap={handleLocateOnMap}
+            locateTarget={locateTarget}
+            lastSyncSeconds={lastSyncSeconds}
           />
         );
     }
@@ -2902,6 +3051,8 @@ export default function NERCommandApp({
           onOpenTimeline={() => setTimelineModalOpen(true)}
           onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
           onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
+          onOpenHazardMonitor={() => setHazardMonitorOpen(true)}
+          activeHazardsCount={floods.length + accidentsState.length + bridgesState.filter(b => b.condition !== 'OPERATIONAL').length}
         />
         <main className="app-content">
           {renderPage()}
@@ -2944,6 +3095,16 @@ export default function NERCommandApp({
       <FieldEvidenceModal
         isOpen={fieldEvidenceModalOpen}
         onClose={() => setFieldEvidenceModalOpen(false)}
+      />
+      <LiveRegionalHazardMonitor
+        isOpen={hazardMonitorOpen}
+        onClose={() => setHazardMonitorOpen(false)}
+        floods={floods}
+        bridges={bridgesState}
+        accidents={accidentsState}
+        highways={highwaysState}
+        onLocateOnMap={handleLocateOnMap}
+        lastUpdatedSecondsAgo={lastSyncSeconds}
       />
     </div>
   );

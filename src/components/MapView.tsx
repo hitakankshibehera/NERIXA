@@ -38,6 +38,7 @@ import RealWorldImageryPanel from './maps/RealWorldImageryPanel';
 import BeforeAfterComparisonModal from './maps/BeforeAfterComparisonModal';
 import AdminMapConfigModal from './maps/AdminMapConfigModal';
 import { loadGoogleMapsScript, isGoogleMapsLoaded } from '@/lib/maps/googleMapsLoader';
+import { INITIAL_FLOOD_ZONES, INITIAL_BRIDGES, INITIAL_ACCIDENTS } from '@/lib/hazards/liveHazardFeed';
 import {
   RoadmapIcon,
   SatelliteImageryIcon,
@@ -447,6 +448,14 @@ interface MapViewProps {
   onOpenWeatherModal?: () => void;
   onOpenImageIntel?: () => void;
   onOpenSatelliteIntel?: () => void;
+  locateTarget?: {
+    lat: number;
+    lng: number;
+    title: string;
+    category?: 'FLOOD' | 'BRIDGE' | 'ACCIDENT' | 'HIGHWAY' | string;
+    details?: string;
+    percentage?: number;
+  } | null;
 }
 
 const DEFAULT_OPERATIONAL_LAYERS = [
@@ -480,6 +489,7 @@ export default function MapView({
   onOpenWeatherModal,
   onOpenImageIntel,
   onOpenSatelliteIntel,
+  locateTarget,
 }: MapViewProps) {
   // Map References
   const mapRef = useRef<L.Map | null>(null);
@@ -1045,6 +1055,61 @@ export default function MapView({
     routeBPoly.addTo(lg);
   }, [activeReroute]);
 
+  // ── Render: Smooth Fly-To & Highlight Locate Target (Flood / Bridge / Accident / Highway) ──
+  useEffect(() => {
+    if (!locateTarget || !mapRef.current) return;
+    const map = mapRef.current;
+    map.flyTo([locateTarget.lat, locateTarget.lng], 13, {
+      duration: 1.5,
+      easeLinearity: 0.25,
+    });
+
+    const isFlood = locateTarget.category === 'FLOOD';
+    const isBridge = locateTarget.category === 'BRIDGE';
+    const highlightColor = isFlood ? '#38bdf8' : isBridge ? '#f97316' : '#ef4444';
+
+    const highlight = L.circleMarker([locateTarget.lat, locateTarget.lng], {
+      radius: 22,
+      color: highlightColor,
+      fillColor: highlightColor,
+      fillOpacity: 0.45,
+      weight: 3,
+    }).addTo(map);
+
+    L.popup({ offset: [0, -10] })
+      .setLatLng([locateTarget.lat, locateTarget.lng])
+      .setContent(`
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:250px;line-height:1.4">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <strong style="color:#f8fafc;font-size:13px">${locateTarget.title}</strong>
+            <span style="background:rgba(239,68,68,0.25);color:#fca5a5;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:800">LIVE TELEMETRY</span>
+          </div>
+          ${locateTarget.percentage !== undefined ? `
+            <div style="margin:6px 0;background:rgba(0,0,0,0.3);padding:4px 8px;border-radius:4px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+                <span style="color:#cbd5e1">Severity / Inundation:</span>
+                <span style="font-weight:800;color:${highlightColor}">${locateTarget.percentage}%</span>
+              </div>
+              <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden">
+                <div style="width:${locateTarget.percentage}%;height:100%;background:${highlightColor}"></div>
+              </div>
+            </div>
+          ` : ''}
+          <div style="font-size:11px;color:#cbd5e1;line-height:1.4">${locateTarget.details || ''}</div>
+        </div>
+      `)
+      .openOn(map);
+
+    const timer = setTimeout(() => {
+      if (map.hasLayer(highlight)) map.removeLayer(highlight);
+    }, 12000);
+
+    return () => {
+      clearTimeout(timer);
+      if (map.hasLayer(highlight)) map.removeLayer(highlight);
+    };
+  }, [locateTarget]);
+
   // ── Render 3: Shipments Layer (Requirement 8 - 📦 Shipment) ──
   useEffect(() => {
     const lg = layerGroupsRef.current.shipments;
@@ -1124,6 +1189,41 @@ export default function MapView({
           };
         }
       });
+
+      marker.addTo(lg);
+    });
+
+    // Also render Live Highway Accidents
+    INITIAL_ACCIDENTS.forEach((acc) => {
+      const marker = L.marker([acc.location.lat, acc.location.lng], {
+        icon: L.divIcon({
+          html: `
+            <div style="background:rgba(28,10,10,0.95);border:2px solid #ef4444;border-radius:10px;padding:2px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(239,68,68,0.6);cursor:pointer;white-space:nowrap;">
+              <span style="font-size:12px">🚨</span>
+              <span style="font-size:9px;font-weight:800;color:#fca5a5;font-family:var(--font-mono)">${acc.severity} ACCIDENT</span>
+            </div>
+          `,
+          className: '',
+          iconSize: [110, 22],
+          iconAnchor: [55, 11],
+        }),
+      });
+
+      marker.bindPopup(`
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <strong style="color:#ef4444;font-size:13px">${acc.title}</strong>
+            <span style="background:rgba(239,68,68,0.25);color:#fca5a5;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800">${acc.severity}</span>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:4px">
+            <div>Highway: <strong>${acc.highway}</strong> (${acc.locationName})</div>
+            <div>Blockage: <strong style="color:#ef4444">${acc.lanesBlocked}</strong></div>
+            <div>Clearance ETA: <strong>~${acc.clearanceEtaMinutes} mins</strong></div>
+            <div>Casualties: <strong>${acc.casualties}</strong></div>
+          </div>
+          <div style="font-size:11px;color:#facc15"><strong>Detour:</strong> ${acc.alternateRoute}</div>
+        </div>
+      `);
 
       marker.addTo(lg);
     });
@@ -1225,6 +1325,43 @@ export default function MapView({
 
       polygon.addTo(targetGroup);
     });
+
+    // Also render Live Flood Gauge Stations with Inundation Percentage
+    if (lgFlood && activeLayers.has('floodZones')) {
+      INITIAL_FLOOD_ZONES.forEach((fz) => {
+        const marker = L.marker([fz.location.lat, fz.location.lng], {
+          icon: L.divIcon({
+            html: `
+              <div style="background:rgba(8,18,36,0.95);border:2px solid #38bdf8;border-radius:12px;padding:2px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(56,189,248,0.5);cursor:pointer;white-space:nowrap;">
+                <span style="font-size:12px">🌊</span>
+                <span style="font-size:10px;font-weight:800;color:#38bdf8;font-family:var(--font-mono)">FLOOD ${fz.floodPercentage}%</span>
+              </div>
+            `,
+            className: '',
+            iconSize: [92, 22],
+            iconAnchor: [46, 11],
+          }),
+        });
+
+        marker.bindPopup(`
+          <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <strong style="color:#38bdf8;font-size:13px">${fz.name}</strong>
+              <span style="background:rgba(56,189,248,0.2);color:#38bdf8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${fz.floodPercentage}%</span>
+            </div>
+            <div style="font-size:11px;color:#cbd5e1;margin-bottom:6px">
+              <div>Highway: <strong>${fz.highway}</strong></div>
+              <div>Water Level: <strong>${fz.currentLevelMeters}m (${fz.waterLevelMeters > 0 ? '+' : ''}${fz.waterLevelMeters}m vs Danger)</strong></div>
+              <div>Precipitation: <strong>${fz.rainfallRateMmPerHour} mm/hr</strong> • Trend: <strong>${fz.trend}</strong></div>
+              <div>Submerged Stretch: <strong>${fz.affectedRoadLengthKm} km</strong></div>
+              <div style="margin-top:4px;color:#fb923c"><strong>Diversion:</strong> ${fz.divertedRoute}</div>
+            </div>
+          </div>
+        `);
+
+        marker.addTo(lgFlood);
+      });
+    }
   }, [activeLayers]);
 
   // ── Render 7: Live Weather Layer (Requirement 3 - Weather) ──
@@ -1399,6 +1536,44 @@ export default function MapView({
             <div>Condition: <span style="font-weight:700;color:${color}">${b.condition}</span></div>
             <div>Pier Scour Risk: <strong style="color:${color}">${b.risk}/100</strong></div>
           </div>
+        </div>
+      `);
+
+      marker.addTo(lg);
+    });
+
+    // Also render Live Monitored Bridges
+    INITIAL_BRIDGES.forEach((b) => {
+      const isCollapsed = b.condition === 'COLLAPSED';
+      const isScour = b.condition === 'SCOUR_CRITICAL';
+      const color = isCollapsed ? '#ef4444' : isScour ? '#f97316' : '#22c55e';
+      const marker = L.marker([b.location.lat, b.location.lng], {
+        icon: L.divIcon({
+          html: `
+            <div style="background:rgba(11,19,41,0.95);border:2px solid ${color};border-radius:8px;padding:2px 6px;display:flex;align-items:center;gap:4px;box-shadow:0 3px 10px rgba(0,0,0,0.8);cursor:pointer;white-space:nowrap;">
+              <span style="font-size:12px">🌉</span>
+              <span style="font-size:9px;font-weight:800;color:${color};font-family:var(--font-mono)">${b.name.split(' ')[0]} ${isCollapsed ? '💥 CLOSED' : ''}</span>
+            </div>
+          `,
+          className: '',
+          iconSize: [85, 22],
+          iconAnchor: [42, 11],
+        }),
+      });
+
+      marker.bindPopup(`
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:230px;line-height:1.4">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <strong style="color:${color};font-size:13px">${b.name}</strong>
+            <span style="background:${color}25;color:${color};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800">${b.condition}</span>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:4px">
+            <div>River: <strong>${b.river}</strong> • Highway: <strong>${b.highway}</strong></div>
+            <div>Structural Integrity: <strong>${b.healthPercentage}%</strong></div>
+            <div>Pier Status: <strong>${b.pierStatus}</strong></div>
+            <div>Load Limit: <strong>${b.loadCapacityTons > 0 ? `${b.loadCapacityTons} Tons` : '0 Tons (CLOSED)'}</strong></div>
+          </div>
+          <div style="font-size:11px;color:#fca5a5"><strong>Diversion:</strong> ${b.diversion}</div>
         </div>
       `);
 
