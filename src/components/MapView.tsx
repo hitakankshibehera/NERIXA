@@ -448,6 +448,24 @@ interface MapViewProps {
   onOpenWeatherModal?: () => void;
   onOpenImageIntel?: () => void;
   onOpenSatelliteIntel?: () => void;
+  onOpenSatelliteForHazard?: (hazard: {
+    id?: string;
+    title: string;
+    category: 'FLOOD' | 'BRIDGE' | 'LANDSLIDE' | 'ACCIDENT' | 'HIGHWAY';
+    locationName?: string;
+    state?: string;
+    district?: string;
+    lat: number;
+    lng: number;
+    severity?: string;
+    percentage?: number;
+    details?: string;
+    divertedRoute?: string;
+    waterLevelMeters?: number;
+    affectedRoadLengthKm?: number;
+    river?: string;
+    highway?: string;
+  }) => void;
   locateTarget?: {
     lat: number;
     lng: number;
@@ -489,6 +507,7 @@ export default function MapView({
   onOpenWeatherModal,
   onOpenImageIntel,
   onOpenSatelliteIntel,
+  onOpenSatelliteForHazard,
   locateTarget,
 }: MapViewProps) {
   // Map References
@@ -1177,8 +1196,11 @@ export default function MapView({
               <strong>AI Analysis:</strong> ${inc.aiAnalysis.roadBlockage}% blockage • Clear ETA: ${inc.aiAnalysis.estimatedClearTime}
             </div>
           ` : ''}
-          <button id="btn-inspect-reality-${inc.id}" style="width:100%;background:#2563eb;color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.02em">
+          <button id="btn-inspect-reality-${inc.id}" style="width:100%;background:#2563eb;color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.02em;margin-bottom:4px">
             INSPECT GROUND REALITY & UAV RECON
+          </button>
+          <button id="btn-sat-incident-${inc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ VIEW SATELLITE SAR PASS & ANALYSIS
           </button>
         </div>`
       );
@@ -1189,6 +1211,21 @@ export default function MapView({
           btn.onclick = () => {
             if (onSelectIncident) onSelectIncident(inc);
             if (onOpenRealityRecon) onOpenRealityRecon(inc.id === 'inc-1' ? 0 : inc.id === 'inc-2' ? 1 : 2);
+          };
+        }
+        const satBtn = document.getElementById(`btn-sat-incident-${inc.id}`);
+        if (satBtn && onOpenSatelliteForHazard) {
+          satBtn.onclick = () => {
+            onOpenSatelliteForHazard({
+              id: inc.id,
+              title: `${inc.type.replace(/_/g, ' ')} on ${inc.roadName}`,
+              category: inc.type.includes('FLOOD') ? 'FLOOD' : inc.type.includes('BRIDGE') ? 'BRIDGE' : 'LANDSLIDE',
+              locationName: inc.roadName,
+              lat: inc.location.lat,
+              lng: inc.location.lng,
+              severity: inc.severity >= 8 ? 'CRITICAL' : 'HIGH',
+              details: inc.description,
+            });
           };
         }
       });
@@ -1224,9 +1261,32 @@ export default function MapView({
             <div>Clearance ETA: <strong>~${acc.clearanceEtaMinutes} mins</strong></div>
             <div>Casualties: <strong>${acc.casualties}</strong></div>
           </div>
-          <div style="font-size:11px;color:#facc15"><strong>Detour:</strong> ${acc.alternateRoute}</div>
+          <div style="font-size:11px;color:#facc15;margin-bottom:6px"><strong>Detour:</strong> ${acc.alternateRoute}</div>
+          <button id="btn-sat-acc-${acc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ VIEW REAL-TIME SATELLITE PASS
+          </button>
         </div>
       `);
+
+      marker.on('popupopen', () => {
+        const satBtn = document.getElementById(`btn-sat-acc-${acc.id}`);
+        if (satBtn && onOpenSatelliteForHazard) {
+          satBtn.onclick = () => {
+            onOpenSatelliteForHazard({
+              id: acc.id,
+              title: acc.title,
+              category: 'ACCIDENT',
+              locationName: `${acc.highway} (${acc.locationName})`,
+              lat: acc.location.lat,
+              lng: acc.location.lng,
+              severity: acc.severity,
+              details: `${acc.lanesBlocked}. Clearance: ~${acc.clearanceEtaMinutes}m. Alternate: ${acc.alternateRoute}`,
+              divertedRoute: acc.alternateRoute,
+              highway: acc.highway,
+            });
+          };
+        }
+      });
 
       marker.addTo(lg);
     });
@@ -1312,18 +1372,32 @@ export default function MapView({
       polygon.bindTooltip(
         `<div style="font-size:12px;font-family:Inter,sans-serif;font-weight:600;color:#f8fafc">
           <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dp.color};margin-right:6px"></span><strong>${dp.name}</strong><br/>
-          <span style="color:${dp.color};font-weight:700">${dp.risk}</span>
+          <span style="color:${dp.color};font-weight:700">${dp.risk}</span><br/>
+          <span style="color:#c084fc;font-size:10px;font-weight:800">Click to View Real-Time Satellite SAR Pass 🛰️</span>
         </div>`,
         { sticky: true }
       );
 
       polygon.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
-        setStreetViewTarget({
-          lat: dp.coords[0][0],
-          lng: dp.coords[0][1],
-          locationName: dp.name,
-        });
+        if (onOpenSatelliteForHazard) {
+          onOpenSatelliteForHazard({
+            id: dp.id,
+            title: dp.name,
+            category: dp.type === 'FLOOD' ? 'FLOOD' : dp.type === 'BRIDGE_SCOUR' ? 'BRIDGE' : 'LANDSLIDE',
+            locationName: dp.name,
+            lat: dp.coords[0][0],
+            lng: dp.coords[0][1],
+            severity: 'CRITICAL',
+            details: dp.risk,
+          });
+        } else {
+          setStreetViewTarget({
+            lat: dp.coords[0][0],
+            lng: dp.coords[0][1],
+            locationName: dp.name,
+          });
+        }
       });
 
       polygon.addTo(targetGroup);
@@ -1357,10 +1431,35 @@ export default function MapView({
               <div>Water Level: <strong>${fz.currentLevelMeters}m (${fz.waterLevelMeters > 0 ? '+' : ''}${fz.waterLevelMeters}m vs Danger)</strong></div>
               <div>Precipitation: <strong>${fz.rainfallRateMmPerHour} mm/hr</strong> • Trend: <strong>${fz.trend}</strong></div>
               <div>Submerged Stretch: <strong>${fz.affectedRoadLengthKm} km</strong></div>
-              <div style="margin-top:4px;color:#fb923c"><strong>Diversion:</strong> ${fz.divertedRoute}</div>
+              <div style="margin-top:4px;color:#fb923c;margin-bottom:6px"><strong>Diversion:</strong> ${fz.divertedRoute}</div>
             </div>
+            <button id="btn-sat-flood-${fz.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+              🛰️ VIEW REAL-TIME SATELLITE ANALYSIS
+            </button>
           </div>
         `);
+
+        marker.on('popupopen', () => {
+          const btn = document.getElementById(`btn-sat-flood-${fz.id}`);
+          if (btn && onOpenSatelliteForHazard) {
+            btn.onclick = () => {
+              onOpenSatelliteForHazard({
+                id: fz.id,
+                title: fz.name,
+                category: 'FLOOD',
+                locationName: `${fz.highway} Flood Embankment`,
+                lat: fz.location.lat,
+                lng: fz.location.lng,
+                severity: fz.floodPercentage >= 80 ? 'CRITICAL' : 'HIGH',
+                percentage: fz.floodPercentage,
+                divertedRoute: fz.divertedRoute,
+                waterLevelMeters: fz.waterLevelMeters,
+                affectedRoadLengthKm: fz.affectedRoadLengthKm,
+                highway: fz.highway,
+              });
+            };
+          }
+        });
 
         marker.addTo(lgFlood);
       });
@@ -1539,8 +1638,30 @@ export default function MapView({
             <div>Condition: <span style="font-weight:700;color:${color}">${b.condition}</span></div>
             <div>Pier Scour Risk: <strong style="color:${color}">${b.risk}/100</strong></div>
           </div>
+          <button id="btn-sat-br-${b.id}" style="width:100%;margin-top:6px;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ SATELLITE RADAR ANALYSIS
+          </button>
         </div>
       `);
+
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`btn-sat-br-${b.id}`);
+        if (btn && onOpenSatelliteForHazard) {
+          btn.onclick = () => {
+            onOpenSatelliteForHazard({
+              id: b.id,
+              title: b.name,
+              category: 'BRIDGE',
+              locationName: `${b.riverName || 'River'} Bridge Corridor`,
+              lat: b.location.lat,
+              lng: b.location.lng,
+              severity: isCritical ? 'CRITICAL' : 'HIGH',
+              percentage: b.risk,
+              river: b.riverName,
+            });
+          };
+        }
+      });
 
       marker.addTo(lg);
     });
@@ -1576,9 +1697,35 @@ export default function MapView({
             <div>Pier Status: <strong>${b.pierStatus}</strong></div>
             <div>Load Limit: <strong>${b.loadCapacityTons > 0 ? `${b.loadCapacityTons} Tons` : '0 Tons (CLOSED)'}</strong></div>
           </div>
-          <div style="font-size:11px;color:#fca5a5"><strong>Diversion:</strong> ${b.diversion}</div>
+          <div style="font-size:11px;color:#fca5a5;margin-bottom:6px"><strong>Diversion:</strong> ${b.diversion}</div>
+          <button id="btn-sat-bridge-${b.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ VIEW REAL-TIME SATELLITE ANALYSIS
+          </button>
         </div>
       `);
+
+      marker.on('popupopen', () => {
+        const btn = document.getElementById(`btn-sat-bridge-${b.id}`);
+        if (btn && onOpenSatelliteForHazard) {
+          btn.onclick = () => {
+            onOpenSatelliteForHazard({
+              id: b.id,
+              title: b.name,
+              category: 'BRIDGE',
+              locationName: `${b.river} (${b.state})`,
+              state: b.state,
+              lat: b.location.lat,
+              lng: b.location.lng,
+              severity: isCollapsed ? 'CRITICAL' : isScour ? 'HIGH' : 'MODERATE',
+              percentage: b.healthPercentage,
+              details: `Condition: ${b.condition}. ${b.description}`,
+              divertedRoute: b.diversion,
+              river: b.river,
+              highway: b.highway,
+            });
+          };
+        }
+      });
 
       marker.addTo(lg);
     });

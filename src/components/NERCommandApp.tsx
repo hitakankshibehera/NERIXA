@@ -55,6 +55,7 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false, load
 
 import LiveHazardTicker from '@/components/hazards/LiveHazardTicker';
 import LiveRegionalHazardMonitor from '@/components/hazards/LiveRegionalHazardMonitor';
+import SatelliteHazardImageryModal, { type SatelliteHazardPayload } from '@/components/satellite/SatelliteHazardImageryModal';
 import {
   INITIAL_FLOOD_ZONES,
   INITIAL_BRIDGES,
@@ -1447,6 +1448,7 @@ function DashboardPage({
   accidentsState,
   highwaysState,
   onOpenHazardMonitor,
+  onOpenSatelliteForHazard,
   onLocateOnMap,
   locateTarget,
   lastSyncSeconds,
@@ -1462,6 +1464,7 @@ function DashboardPage({
   accidentsState?: LiveAccidentAlert[];
   highwaysState?: LiveHighwayStatus[];
   onOpenHazardMonitor?: () => void;
+  onOpenSatelliteForHazard?: (hazard: any) => void;
   onLocateOnMap?: (target: {
     lat: number;
     lng: number;
@@ -1724,6 +1727,7 @@ function DashboardPage({
             highways={highwaysState}
             onOpenMonitor={onOpenHazardMonitor}
             onLocateOnMap={onLocateOnMap}
+            onOpenSatelliteForHazard={onOpenSatelliteForHazard}
             lastUpdatedSecondsAgo={lastSyncSeconds ?? 3}
           />
         </div>
@@ -1769,6 +1773,7 @@ function DashboardPage({
             onOpenWeatherModal={onOpenWeatherModal}
             onOpenImageIntel={() => onNavigate('image-intel')}
             onOpenSatelliteIntel={() => onNavigate('satellite-intel')}
+            onOpenSatelliteForHazard={onOpenSatelliteForHazard}
           />
         </div>
 
@@ -1798,6 +1803,7 @@ function DashboardPage({
               if (onOpenFieldEvidence) onOpenFieldEvidence();
               else onNavigate('image-intel');
             }}
+            onOpenSatelliteForHazard={onOpenSatelliteForHazard}
             isCollapsed={dockCollapsed}
             onToggleCollapse={() => setDockCollapsed(!dockCollapsed)}
           />
@@ -2869,12 +2875,14 @@ function MapPage({
   onOpenWeatherModal,
   onOpenImageIntel,
   onOpenSatelliteIntel,
+  onOpenSatelliteForHazard,
   locateTarget,
 }: { 
   onOpenRealityRecon?: (idx?: number) => void; 
   onOpenWeatherModal?: () => void;
   onOpenImageIntel?: () => void;
   onOpenSatelliteIntel?: () => void;
+  onOpenSatelliteForHazard?: (hazard: any) => void;
   locateTarget?: any;
 }) {
   return (
@@ -2885,6 +2893,7 @@ function MapPage({
         onOpenWeatherModal={onOpenWeatherModal}
         onOpenImageIntel={onOpenImageIntel}
         onOpenSatelliteIntel={onOpenSatelliteIntel}
+        onOpenSatelliteForHazard={onOpenSatelliteForHazard}
         locateTarget={locateTarget}
       />
     </div>
@@ -2921,6 +2930,14 @@ export default function NERCommandApp({
   const [accidentsState, setAccidentsState] = useState<LiveAccidentAlert[]>(INITIAL_ACCIDENTS);
   const [highwaysState, setHighwaysState] = useState<LiveHighwayStatus[]>(INITIAL_HIGHWAYS);
   const [hazardMonitorOpen, setHazardMonitorOpen] = useState(false);
+  const [satelliteHazardModal, setSatelliteHazardModal] = useState<{
+    isOpen: boolean;
+    hazard: SatelliteHazardPayload | null;
+  }>({ isOpen: false, hazard: null });
+
+  const handleOpenSatelliteForHazard = (hazard: SatelliteHazardPayload) => {
+    setSatelliteHazardModal({ isOpen: true, hazard });
+  };
   const [locateTarget, setLocateTarget] = useState<{
     lat: number;
     lng: number;
@@ -2996,6 +3013,7 @@ export default function NERCommandApp({
             accidentsState={accidentsState}
             highwaysState={highwaysState}
             onOpenHazardMonitor={() => setHazardMonitorOpen(true)}
+            onOpenSatelliteForHazard={handleOpenSatelliteForHazard}
             onLocateOnMap={handleLocateOnMap}
             locateTarget={locateTarget}
             lastSyncSeconds={lastSyncSeconds}
@@ -3004,7 +3022,7 @@ export default function NERCommandApp({
       case 'satellite-intel': return <SatelliteIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'image-intel': return <ImageIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'reality': return <RealityReconPage onNavigate={setActivePage} />;
-      case 'map': return <MapPage onOpenRealityRecon={handleOpenReality} onOpenWeatherModal={() => setWeatherModalOpen(true)} onOpenImageIntel={() => setActivePage('image-intel')} onOpenSatelliteIntel={() => setActivePage('satellite-intel')} locateTarget={locateTarget} />;
+      case 'map': return <MapPage onOpenRealityRecon={handleOpenReality} onOpenWeatherModal={() => setWeatherModalOpen(true)} onOpenImageIntel={() => setActivePage('image-intel')} onOpenSatelliteIntel={() => setActivePage('satellite-intel')} onOpenSatelliteForHazard={handleOpenSatelliteForHazard} locateTarget={locateTarget} />;
       case 'risk': return <RiskPage />;
       case 'routes': return <RoutesPage />;
       case 'simulation': return <SimulationPage />;
@@ -3112,7 +3130,16 @@ export default function NERCommandApp({
         accidents={accidentsState}
         highways={highwaysState}
         onLocateOnMap={handleLocateOnMap}
+        onOpenSatelliteForHazard={handleOpenSatelliteForHazard}
         lastUpdatedSecondsAgo={lastSyncSeconds}
+      />
+      <SatelliteHazardImageryModal
+        isOpen={satelliteHazardModal.isOpen}
+        onClose={() => setSatelliteHazardModal({ isOpen: false, hazard: null })}
+        hazard={satelliteHazardModal.hazard}
+        onLocateOnMap={handleLocateOnMap}
+        onNavigateToRoutes={() => setActivePage('routes')}
+        onOpenSatelliteHub={() => setActivePage('satellite-intel')}
       />
     </div>
   );

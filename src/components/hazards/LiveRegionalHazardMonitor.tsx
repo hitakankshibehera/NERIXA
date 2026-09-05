@@ -23,6 +23,24 @@ interface LiveRegionalHazardMonitorProps {
     details: string;
     percentage?: number;
   }) => void;
+  onOpenSatelliteForHazard?: (hazard: {
+    id?: string;
+    title: string;
+    category: 'FLOOD' | 'BRIDGE' | 'LANDSLIDE' | 'ACCIDENT' | 'HIGHWAY';
+    locationName?: string;
+    state?: string;
+    district?: string;
+    lat: number;
+    lng: number;
+    severity?: string;
+    percentage?: number;
+    details?: string;
+    divertedRoute?: string;
+    waterLevelMeters?: number;
+    affectedRoadLengthKm?: number;
+    river?: string;
+    highway?: string;
+  }) => void;
   lastUpdatedSecondsAgo: number;
 }
 
@@ -34,6 +52,7 @@ export default function LiveRegionalHazardMonitor({
   accidents,
   highways,
   onLocateOnMap,
+  onOpenSatelliteForHazard,
   lastUpdatedSecondsAgo,
 }: LiveRegionalHazardMonitorProps) {
   const [activeTab, setActiveTab] = useState<'FLOOD' | 'BRIDGE' | 'ACCIDENT' | 'HIGHWAY'>('FLOOD');
@@ -311,34 +330,76 @@ export default function LiveRegionalHazardMonitor({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          onLocateOnMap({
-                            lat: flood.location.lat,
-                            lng: flood.location.lng,
-                            title: flood.name,
-                            category: 'FLOOD',
-                            details: `Flood Level: ${flood.floodPercentage}% (${flood.waterLevelMeters > 0 ? '+' : ''}${flood.waterLevelMeters}m above danger mark). ${flood.divertedRoute}`,
-                            percentage: flood.floodPercentage,
-                          });
-                          onClose();
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(56, 189, 248, 0.15)',
-                          border: '1px solid rgba(56, 189, 248, 0.4)',
-                          color: '#38bdf8',
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📍 Locate on Map
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {onOpenSatelliteForHazard && (
+                          <button
+                            onClick={() => {
+                              onOpenSatelliteForHazard({
+                                id: flood.id,
+                                title: flood.name,
+                                category: 'FLOOD',
+                                locationName: `${flood.district}, ${flood.state}`,
+                                state: flood.state,
+                                district: flood.district,
+                                lat: flood.location.lat,
+                                lng: flood.location.lng,
+                                severity: isCritical ? 'CRITICAL' : 'HIGH',
+                                percentage: flood.floodPercentage,
+                                details: `Flood Level: ${flood.floodPercentage}% (${flood.waterLevelMeters > 0 ? '+' : ''}${flood.waterLevelMeters}m above danger mark). ${flood.divertedRoute}`,
+                                divertedRoute: flood.divertedRoute,
+                                waterLevelMeters: flood.waterLevelMeters,
+                                affectedRoadLengthKm: flood.affectedRoadLengthKm,
+                                highway: flood.highway,
+                              });
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                              border: '1px solid rgba(168, 85, 247, 0.6)',
+                              color: '#c084fc',
+                              padding: '6px 14px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(168, 85, 247, 0.2)',
+                            }}
+                          >
+                            🛰️ Satellite Analysis
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onLocateOnMap({
+                              lat: flood.location.lat,
+                              lng: flood.location.lng,
+                              title: flood.name,
+                              category: 'FLOOD',
+                              details: `Flood Level: ${flood.floodPercentage}% (${flood.waterLevelMeters > 0 ? '+' : ''}${flood.waterLevelMeters}m above danger mark). ${flood.divertedRoute}`,
+                              percentage: flood.floodPercentage,
+                            });
+                            onClose();
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                            color: '#38bdf8',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📍 Locate on Map
+                        </button>
+                      </div>
                     </div>
 
                     {/* Flood Inundation Progress Bar */}
@@ -463,34 +524,74 @@ export default function LiveRegionalHazardMonitor({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          onLocateOnMap({
-                            lat: bridge.location.lat,
-                            lng: bridge.location.lng,
-                            title: bridge.name,
-                            category: 'BRIDGE',
-                            details: `Condition: ${bridge.condition}. ${bridge.description} ${bridge.diversion}`,
-                            percentage: bridge.healthPercentage,
-                          });
-                          onClose();
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(249, 115, 22, 0.15)',
-                          border: '1px solid rgba(249, 115, 22, 0.4)',
-                          color: '#fb923c',
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📍 Locate on Map
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {onOpenSatelliteForHazard && (
+                          <button
+                            onClick={() => {
+                              onOpenSatelliteForHazard({
+                                id: bridge.id,
+                                title: bridge.name,
+                                category: 'BRIDGE',
+                                locationName: `${bridge.river} (${bridge.state})`,
+                                state: bridge.state,
+                                lat: bridge.location.lat,
+                                lng: bridge.location.lng,
+                                severity: isCollapsed ? 'CRITICAL' : isScour ? 'HIGH' : 'MODERATE',
+                                percentage: bridge.healthPercentage,
+                                details: `Condition: ${bridge.condition}. ${bridge.description} ${bridge.diversion}`,
+                                divertedRoute: bridge.diversion,
+                                river: bridge.river,
+                                highway: bridge.highway,
+                              });
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                              border: '1px solid rgba(168, 85, 247, 0.6)',
+                              color: '#c084fc',
+                              padding: '6px 14px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(168, 85, 247, 0.2)',
+                            }}
+                          >
+                            🛰️ Satellite Analysis
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onLocateOnMap({
+                              lat: bridge.location.lat,
+                              lng: bridge.location.lng,
+                              title: bridge.name,
+                              category: 'BRIDGE',
+                              details: `Condition: ${bridge.condition}. ${bridge.description} ${bridge.diversion}`,
+                              percentage: bridge.healthPercentage,
+                            });
+                            onClose();
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(249, 115, 22, 0.15)',
+                            border: '1px solid rgba(249, 115, 22, 0.4)',
+                            color: '#fb923c',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📍 Locate on Map
+                        </button>
+                      </div>
                     </div>
 
                     <p style={{ margin: 0, fontSize: '12px', color: '#cbd5e1', lineHeight: 1.4 }}>
@@ -602,34 +703,73 @@ export default function LiveRegionalHazardMonitor({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          onLocateOnMap({
-                            lat: accident.location.lat,
-                            lng: accident.location.lng,
-                            title: accident.title,
-                            category: 'ACCIDENT',
-                            details: `${accident.lanesBlocked}. Vehicles: ${accident.vehiclesInvolved}. Emergency Units: ${accident.emergencyUnits.join(', ')}. Clearance ETA: ~${accident.clearanceEtaMinutes} mins. Alternate: ${accident.alternateRoute}`,
-                            percentage: accident.blockagePercentage,
-                          });
-                          onClose();
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: 'rgba(239, 68, 68, 0.15)',
-                          border: '1px solid rgba(239, 68, 68, 0.4)',
-                          color: '#f87171',
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📍 Locate on Map
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {onOpenSatelliteForHazard && (
+                          <button
+                            onClick={() => {
+                              onOpenSatelliteForHazard({
+                                id: accident.id,
+                                title: accident.title,
+                                category: 'ACCIDENT',
+                                locationName: `${accident.locationName}, ${accident.state}`,
+                                state: accident.state,
+                                lat: accident.location.lat,
+                                lng: accident.location.lng,
+                                severity: accident.severity,
+                                percentage: accident.blockagePercentage,
+                                details: `${accident.lanesBlocked}. Vehicles: ${accident.vehiclesInvolved}. Clearance ETA: ~${accident.clearanceEtaMinutes} mins. Alternate: ${accident.alternateRoute}`,
+                                divertedRoute: accident.alternateRoute,
+                                highway: accident.highway,
+                              });
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                              border: '1px solid rgba(168, 85, 247, 0.6)',
+                              color: '#c084fc',
+                              padding: '6px 14px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(168, 85, 247, 0.2)',
+                            }}
+                          >
+                            🛰️ Satellite Analysis
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onLocateOnMap({
+                              lat: accident.location.lat,
+                              lng: accident.location.lng,
+                              title: accident.title,
+                              category: 'ACCIDENT',
+                              details: `${accident.lanesBlocked}. Vehicles: ${accident.vehiclesInvolved}. Emergency Units: ${accident.emergencyUnits.join(', ')}. Clearance ETA: ~${accident.clearanceEtaMinutes} mins. Alternate: ${accident.alternateRoute}`,
+                              percentage: accident.blockagePercentage,
+                            });
+                            onClose();
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'rgba(239, 68, 68, 0.15)',
+                            border: '1px solid rgba(239, 68, 68, 0.4)',
+                            color: '#f87171',
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📍 Locate on Map
+                        </button>
+                      </div>
                     </div>
 
                     <div
@@ -757,34 +897,73 @@ export default function LiveRegionalHazardMonitor({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          onLocateOnMap({
-                            lat: highway.location.lat,
-                            lng: highway.location.lng,
-                            title: `${highway.highway} - ${highway.name}`,
-                            category: 'HIGHWAY',
-                            details: `Status: ${highway.status}. Speed: ${highway.averageSpeedKmh} km/h (Normal: ${highway.normalSpeedKmh} km/h). Delay: +${highway.delaysMinutes} mins. ${highway.recommendedAction}`,
-                            percentage: highway.currentRisk,
-                          });
-                          onClose();
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: `${statusColor}15`,
-                          border: `1px solid ${statusColor}40`,
-                          color: statusColor,
-                          padding: '6px 14px',
-                          borderRadius: '6px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        📍 Locate on Map
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {onOpenSatelliteForHazard && (
+                          <button
+                            onClick={() => {
+                              onOpenSatelliteForHazard({
+                                id: highway.id,
+                                title: `${highway.highway} - ${highway.name}`,
+                                category: 'HIGHWAY',
+                                locationName: `${highway.sector} (${highway.name})`,
+                                state: highway.sector,
+                                lat: highway.location.lat,
+                                lng: highway.location.lng,
+                                severity: highway.status === 'BLOCKED' ? 'CRITICAL' : 'HIGH',
+                                percentage: highway.currentRisk,
+                                details: `Status: ${highway.status}. Speed: ${highway.averageSpeedKmh} km/h (Normal: ${highway.normalSpeedKmh} km/h). Delay: +${highway.delaysMinutes} mins. ${highway.recommendedAction}`,
+                                divertedRoute: highway.recommendedAction,
+                                highway: highway.highway,
+                              });
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                              border: '1px solid rgba(168, 85, 247, 0.6)',
+                              color: '#c084fc',
+                              padding: '6px 14px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(168, 85, 247, 0.2)',
+                            }}
+                          >
+                            🛰️ Satellite Analysis
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            onLocateOnMap({
+                              lat: highway.location.lat,
+                              lng: highway.location.lng,
+                              title: `${highway.highway} - ${highway.name}`,
+                              category: 'HIGHWAY',
+                              details: `Status: ${highway.status}. Speed: ${highway.averageSpeedKmh} km/h (Normal: ${highway.normalSpeedKmh} km/h). Delay: +${highway.delaysMinutes} mins. ${highway.recommendedAction}`,
+                              percentage: highway.currentRisk,
+                            });
+                            onClose();
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: `${statusColor}15`,
+                            border: `1px solid ${statusColor}40`,
+                            color: statusColor,
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          📍 Locate on Map
+                        </button>
+                      </div>
                     </div>
 
                     <div

@@ -48,6 +48,7 @@ interface LiveSurveillanceDockProps {
   onOpenStreetView?: (lat: number, lng: number, name: string) => void;
   onOpenSatelliteHub?: () => void;
   onOpenFieldHub?: () => void;
+  onOpenSatelliteForHazard?: (hazard: any) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -69,6 +70,7 @@ export default function LiveSurveillanceDock({
   onOpenStreetView,
   onOpenSatelliteHub,
   onOpenFieldHub,
+  onOpenSatelliteForHazard,
   isCollapsed = false,
   onToggleCollapse,
 }: LiveSurveillanceDockProps) {
@@ -562,24 +564,61 @@ export default function LiveSurveillanceDock({
                   </div>
                 </div>
 
-                {onOpenStreetView && (
-                  <button
-                    onClick={() => onOpenStreetView(selectedIncident.location.lat, selectedIncident.location.lng, selectedIncident.roadName || 'Incident Site')}
-                    style={{
-                      width: '100%',
-                      background: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      color: '#38bdf8',
-                      padding: '7px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Inspect Incident Ground Evidence
-                  </button>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {onOpenSatelliteForHazard && (
+                    <button
+                      onClick={() => {
+                        onOpenSatelliteForHazard({
+                          id: selectedIncident.id,
+                          title: `${selectedIncident.type.replace(/_/g, ' ')} Incident`,
+                          category: selectedIncident.type.includes('FLOOD') ? 'FLOOD' : selectedIncident.type.includes('BRIDGE') ? 'BRIDGE' : 'LANDSLIDE',
+                          locationName: selectedIncident.roadName,
+                          lat: selectedIncident.location.lat,
+                          lng: selectedIncident.location.lng,
+                          severity: selectedIncident.severity >= 8 ? 'CRITICAL' : 'HIGH',
+                          details: selectedIncident.description,
+                        });
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                        border: '1px solid rgba(168, 85, 247, 0.6)',
+                        color: '#c084fc',
+                        padding: '7px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 8px rgba(168, 85, 247, 0.2)',
+                      }}
+                    >
+                      🛰️ View Real-Time Satellite Analysis
+                    </button>
+                  )}
+
+                  {onOpenStreetView && (
+                    <button
+                      onClick={() => onOpenStreetView(selectedIncident.location.lat, selectedIncident.location.lng, selectedIncident.roadName || 'Incident Site')}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid rgba(56, 189, 248, 0.3)',
+                        color: '#38bdf8',
+                        padding: '7px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Inspect Incident Ground Evidence
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               /* Context 4: General Regional Site Surveillance (Section 22 Default) */

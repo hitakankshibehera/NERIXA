@@ -22,6 +22,7 @@ interface LiveHazardTickerProps {
     details: string;
     percentage?: number;
   }) => void;
+  onOpenSatelliteForHazard?: (hazard: any) => void;
   lastUpdatedSecondsAgo: number;
 }
 
@@ -32,6 +33,7 @@ export default function LiveHazardTicker({
   highways,
   onOpenMonitor,
   onLocateOnMap,
+  onOpenSatelliteForHazard,
   lastUpdatedSecondsAgo,
 }: LiveHazardTickerProps) {
   const [tickerIndex, setTickerIndex] = useState(0);
@@ -221,6 +223,38 @@ export default function LiveHazardTicker({
         <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: 'var(--font-mono)' }}>
           Sensors: <b style={{ color: '#34d399' }}>8 Active</b> • Sync: <b style={{ color: '#f8fafc' }}>{lastUpdatedSecondsAgo}s ago</b>
         </div>
+
+        {currentItem && onOpenSatelliteForHazard && (
+          <button
+            onClick={() =>
+              onOpenSatelliteForHazard({
+                title: currentItem.title,
+                category: currentItem.type,
+                locationName: currentItem.title,
+                lat: currentItem.lat,
+                lng: currentItem.lng,
+                details: currentItem.details,
+                percentage: currentItem.percentage,
+              })
+            }
+            style={{
+              background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25) 0%, rgba(147, 51, 234, 0.3) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.6)',
+              color: '#c084fc',
+              fontSize: '10px',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 6px rgba(168, 85, 247, 0.2)',
+            }}
+          >
+            <span>🛰️ SATELLITE PASS</span>
+          </button>
+        )}
 
         <button
           onClick={onOpenMonitor}
