@@ -300,13 +300,6 @@ function AuthScreen({ portalRole = 'CUSTOMER', portalTitle }: { portalRole?: Por
           </button>
         </div>
 
-        {config.isCustomer && (
-          <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', fontSize: '0.6875rem', color: '#64748b', textAlign: 'center', lineHeight: 1.5 }}>
-            <div style={{ fontWeight: 600, color: '#94a3b8', marginBottom: '0.35rem' }}>Government & Emergency Responders</div>
-            Official personnel must access their department terminal via designated secure URLs:<br />
-            <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>/super-admin</span> • <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>/state-admin</span> • <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>/district-officer</span> • <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>/field-officer</span> • <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>/logistics-operator</span>
-          </div>
-        )}
 
         <p style={{ textAlign: 'center', fontSize: '0.6875rem', color: 'var(--text-tertiary)', marginTop: '1rem', lineHeight: 1.5 }}>
           Government of India — North Eastern Region<br />
