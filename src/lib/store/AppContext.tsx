@@ -11,8 +11,22 @@ import type {
   WeatherData, Incident, Alert, District, NERState,
   RiskPrediction, DashboardSummary, RiskWeights, DemoState,
   SimulationResult, RouteOption, RouteRequest,
-  AuditLog, User
+  AuditLog, User, UserRole
 } from '@/lib/types';
+import {
+  firebaseSignInEmail,
+  firebaseSignUpEmail,
+  firebaseSignInWithGoogle,
+  firebaseSignOut,
+  onFirebaseAuthStateChanged,
+  saveUserProfileToDb,
+  getUserProfileFromDb,
+  pushIncidentToRealtimeDb,
+  subscribeToRealtimeIncidents,
+  pushAlertToRealtimeDb,
+  subscribeToRealtimeAlerts,
+  subscribeToDatabaseConnection,
+} from '@/lib/firebase';
 import {
   SEED_STATES, SEED_DISTRICTS, SEED_ROADS, SEED_BRIDGES,
   SEED_VEHICLES, SEED_SHIPMENTS, SEED_WEATHER, SEED_INCIDENTS,
@@ -125,13 +139,20 @@ interface AppState {
   satelliteAdminConfig: SatelliteAdminConfig;
   satelliteSummary: SatelliteIntelligenceSummary;
   selectedSatelliteObservation: SatelliteObservation | null;
+
+  // Firebase Live Sync & Auth State
+  firebaseConnected: boolean;
+  authLoading: boolean;
+  authError: string | null;
 }
 
 interface AppActions {
   // Auth
-  login: (email: string, password: string) => boolean;
-  register: (email: string, password: string, name: string, role: string) => boolean;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
+  register: (email: string, password: string, name: string, role: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  clearAuthError: () => void;
 
   // Risk
   recalculateRisks: () => void;
@@ -250,7 +271,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [satelliteSummary, setSatelliteSummary] = useState<SatelliteIntelligenceSummary>(INITIAL_SATELLITE_SUMMARY);
   const [selectedSatelliteObservation, setSelectedSatelliteObservation] = useState<SatelliteObservation | null>(SEED_SATELLITE_OBSERVATIONS[0]);
 
-  // Initialize offline queue and check Copernicus status on mount
+  // Firebase Realtime DB & Auth State
+  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Initialize Firebase listeners, offline queue and check Copernicus status on mount
   useEffect(() => {
     setOfflineReportsQueue(getOfflineReportsQueue());
     setIsOfflineMode(getSimulatedOfflineState());
@@ -272,6 +298,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch(err => {
         console.warn('Could not query satellite status API:', err);
       });
+
+    // 1. Firebase Auth State Listener
+    const unsubAuth = onFirebaseAuthStateChanged(async (fbUser) => {
+      if (fbUser) {
+        try {
+          const dbProfile = await getUserProfileFromDb(fbUser.uid);
+          if (dbProfile) {
+            setUser(dbProfile);
+          } else {
+            const newProfile: User = {
+              id: fbUser.uid,
+              email: fbUser.email || '',
+              name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Authorized Responder',
+              role: 'DISTRICT_OFFICER',
+              active: true,
+              createdAt: new Date().toISOString(),
+              lastLogin: new Date().toISOString(),
+            };
+            setUser(newProfile);
+            saveUserProfileToDb(newProfile).catch(() => {});
+          }
+        } catch (e) {
+          console.warn('Could not restore Firebase profile:', e);
+        }
+      }
+    });
+
+    // 2. Firebase Realtime Database Connectivity Listener
+    const unsubConn = subscribeToDatabaseConnection((connected) => {
+      setFirebaseConnected(connected);
+    });
+
+    // 3. Realtime Incidents Synchronization from /incidents
+    const unsubIncidents = subscribeToRealtimeIncidents((rtdbIncidents) => {
+      if (rtdbIncidents && rtdbIncidents.length > 0) {
+        setIncidents((prev) => {
+          const map = new Map<string, Incident>();
+          prev.forEach((inc) => map.set(inc.id, inc));
+          rtdbIncidents.forEach((inc) => map.set(inc.id, inc));
+          return Array.from(map.values());
+        });
+      }
+    });
+
+    // 4. Realtime Alerts Synchronization from /alerts
+    const unsubAlerts = subscribeToRealtimeAlerts((rtdbAlerts) => {
+      if (rtdbAlerts && rtdbAlerts.length > 0) {
+        setAlerts((prev) => {
+          const map = new Map<string, Alert>();
+          prev.forEach((alt) => map.set(alt.id, alt));
+          rtdbAlerts.forEach((alt) => map.set(alt.id, alt));
+          return Array.from(map.values());
+        });
+      }
+    });
+
+    return () => {
+      unsubAuth();
+      unsubConn();
+      unsubIncidents();
+      unsubAlerts();
+    };
   }, []);
 
   const gpsIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -371,40 +459,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [roads, vehicles, shipments, incidents, alerts, riskPredictions]);
 
-  // ── Auth ──
-  const login = useCallback((email: string, _password: string) => {
-    const foundUser = DEMO_USERS.find(u => u.email === email);
-    if (foundUser) {
-      setUser({ ...foundUser, lastLogin: new Date().toISOString() });
+  // ── Auth (Firebase + Demo Fast Login) ──
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
+  const login = useCallback(async (email: string, pass: string): Promise<boolean> => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      // 1. Fast Demo Login check
+      const demoUser = DEMO_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (pass === 'demo' && demoUser) {
+        setUser({ ...demoUser, lastLogin: new Date().toISOString() });
+        setAuthLoading(false);
+        return true;
+      }
+
+      // 2. Firebase Authentication
+      const fbUser = await firebaseSignInEmail(email, pass);
+      const dbProfile = await getUserProfileFromDb(fbUser.uid);
+      const activeUser: User = dbProfile || {
+        id: fbUser.uid,
+        email: fbUser.email || email,
+        name: fbUser.displayName || email.split('@')[0],
+        role: demoUser ? demoUser.role : 'DISTRICT_OFFICER',
+        active: true,
+        createdAt: new Date().toISOString(),
+        lastLogin: new Date().toISOString(),
+      };
+      setUser(activeUser);
+      saveUserProfileToDb(activeUser).catch(() => {});
+      setAuthLoading(false);
       return true;
+    } catch (err: any) {
+      console.warn('Firebase login attempt fallback check:', err);
+      // Fallback for rapid testing if demo account was chosen
+      const demoUser = DEMO_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
+      if (demoUser) {
+        setUser({ ...demoUser, lastLogin: new Date().toISOString() });
+        setAuthLoading(false);
+        return true;
+      }
+      const msg = err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found'
+        ? 'Invalid email or password. Please verify credentials or create an account.'
+        : err.code === 'auth/too-many-requests'
+        ? 'Too many failed login attempts. Please try again in a few moments.'
+        : err.message || 'Authentication error with Firebase.';
+      setAuthError(msg);
+      setAuthLoading(false);
+      return false;
     }
-    // Allow any email for demo
-    setUser({
-      id: `u-${Date.now()}`,
-      email,
-      name: email.split('@')[0],
-      role: 'VIEWER',
-      active: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-    });
-    return true;
   }, []);
 
-  const register = useCallback((email: string, _password: string, name: string, role: string) => {
-    setUser({
-      id: `u-${Date.now()}`,
-      email,
-      name,
-      role: role as User['role'],
-      active: true,
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
-    });
-    return true;
+  const register = useCallback(async (email: string, pass: string, name: string, role: string): Promise<boolean> => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { userProfile } = await firebaseSignUpEmail(email, pass, name, (role as UserRole) || 'VIEWER');
+      setUser(userProfile);
+      setAuthLoading(false);
+      return true;
+    } catch (err: any) {
+      console.warn('Firebase registration error:', err);
+      const msg = err.code === 'auth/email-already-in-use'
+        ? 'This email address is already registered. Please sign in instead.'
+        : err.code === 'auth/weak-password'
+        ? 'Password should be at least 6 characters long.'
+        : err.code === 'auth/operation-not-allowed'
+        ? 'Email/Password sign-in is not enabled in Firebase Console yet. Please toggle it under Firebase Console -> Authentication -> Sign-in method.'
+        : err.message || 'Failed to create Firebase user account.';
+      setAuthError(msg);
+      setAuthLoading(false);
+      return false;
+    }
   }, []);
 
-  const logout = useCallback(() => {
+  const loginWithGoogle = useCallback(async (): Promise<boolean> => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const { userProfile } = await firebaseSignInWithGoogle();
+      setUser(userProfile);
+      setAuthLoading(false);
+      return true;
+    } catch (err: any) {
+      console.warn('Firebase Google Auth error:', err);
+      const msg = err.code === 'auth/popup-closed-by-user'
+        ? 'Google sign-in popup was closed before completing.'
+        : err.code === 'auth/operation-not-allowed'
+        ? 'Google provider is not enabled in Firebase Console. Please enable it under Authentication -> Sign-in method.'
+        : err.message || 'Failed to sign in with Google.';
+      setAuthError(msg);
+      setAuthLoading(false);
+      return false;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await firebaseSignOut();
+    } catch (e) {
+      console.warn('Firebase signout error:', e);
+    }
     setUser(null);
   }, []);
 
@@ -488,6 +645,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       aiRecommendation: `Severity ${severityScore}/10. ${blockagePercent}% road blockage estimated. Recommend immediate assessment.`,
     };
     setAlerts(prev => [newAlert, ...prev]);
+
+    // Synchronize to Firebase Realtime Database (nerixa-2e6f6-default-rtdb)
+    pushIncidentToRealtimeDb(newIncident).catch(err => {
+      console.warn('Realtime Database incident sync warning:', err);
+    });
+    pushAlertToRealtimeDb(newAlert).catch(err => {
+      console.warn('Realtime Database alert sync warning:', err);
+    });
 
     addAuditLogInternal('Reported new incident', 'INCIDENTS', '', JSON.stringify({ id, type: incidentData.type }));
 
@@ -1347,7 +1512,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     imageIntelList, cctvCameras, satellitePasses,
     offlineReportsQueue, isOfflineMode, imageIntelSummary,
     satelliteObservations, satelliteProducts, satelliteAdminConfig, satelliteSummary, selectedSatelliteObservation,
-    login, register, logout,
+    firebaseConnected, authLoading, authError,
+    login, loginWithGoogle, register, logout, clearAuthError,
     recalculateRisks, explainRiskForRoad, updateRiskWeights,
     getOptimizedRoutes, runWhatIfSimulation,
     reportIncident, acknowledgeAlert, resolveAlert,
