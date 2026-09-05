@@ -55,6 +55,7 @@ const MapView = dynamic(() => import('@/components/MapView'), { ssr: false, load
 
 import LiveHazardTicker from '@/components/hazards/LiveHazardTicker';
 import LiveRegionalHazardMonitor from '@/components/hazards/LiveRegionalHazardMonitor';
+import LiveEmergencyNotification from '@/components/common/LiveEmergencyNotification';
 import SatelliteHazardImageryModal, { type SatelliteHazardPayload } from '@/components/satellite/SatelliteHazardImageryModal';
 import {
   INITIAL_FLOOD_ZONES,
@@ -90,6 +91,7 @@ export const PORTAL_CONFIGS: Record<PortalRole, PortalConfig> = {
     badgeColor: '#10b981',
     expectedRole: 'VIEWER',
     isCustomer: true,
+    officialQuickLogin: { email: 'viewer@nershield.gov.in', label: 'Instant Public Citizen / Traveler Live Access', name: 'Citizen / Traveler' },
     description: 'Public traveler terminal. Access live road safety telemetry, active weather alerts, and report hazards directly to state authorities.',
     allowedNavItems: ['dashboard', 'map', 'reality', 'incidents', 'alerts', 'analytics'],
   },
@@ -3132,6 +3134,12 @@ export default function NERCommandApp({
         onLocateOnMap={handleLocateOnMap}
         onOpenSatelliteForHazard={handleOpenSatelliteForHazard}
         lastUpdatedSecondsAgo={lastSyncSeconds}
+      />
+      <LiveEmergencyNotification
+        floods={floods}
+        bridges={bridgesState}
+        onOpenSatelliteForHazard={handleOpenSatelliteForHazard}
+        onLocateOnMap={handleLocateOnMap}
       />
       <SatelliteHazardImageryModal
         isOpen={satelliteHazardModal.isOpen}

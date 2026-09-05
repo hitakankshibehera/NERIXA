@@ -1184,7 +1184,13 @@ export default function MapView({
       });
 
       marker.bindPopup(
-        `<div style="font-size:12px;font-family:Inter,sans-serif;min-width:230px">
+        `<div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px">
+          <div style="position:relative;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(248,113,113,0.4)">
+            <img src="${inc.type.includes('FLOOD') ? '/reality/sentinel1_sar_flood.jpg' : inc.type.includes('BRIDGE') ? '/reality/flood_drone_recon.jpg' : '/reality/landslide_aerial_reality.jpg'}" alt="Incident Aerial Recon" style="width:100%;height:85px;object-fit:cover;display:block;" />
+            <div style="position:absolute;top:5px;left:5px;background:rgba(15,23,42,0.9);color:#f87171;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800">
+              🛰️ INCIDENT SATELLITE RECON
+            </div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <strong style="color:#f87171;font-size:13px">${inc.type.replace(/_/g, ' ')}</strong>
             <span style="background:#dc2626;color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">SEV ${inc.severity}/10</span>
@@ -1199,8 +1205,8 @@ export default function MapView({
           <button id="btn-inspect-reality-${inc.id}" style="width:100%;background:#2563eb;color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.02em;margin-bottom:4px">
             INSPECT GROUND REALITY & UAV RECON
           </button>
-          <button id="btn-sat-incident-${inc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
-            🛰️ VIEW SATELLITE SAR PASS & ANALYSIS
+          <button id="btn-sat-incident-${inc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ VIEW REAL-TIME SATELLITE VIEW (SAR ANALYSIS)
           </button>
         </div>`
       );
@@ -1251,6 +1257,12 @@ export default function MapView({
 
       marker.bindPopup(`
         <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+          <div style="position:relative;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(239,68,68,0.4)">
+            <img src="/reality/landslide_clearance.jpg" alt="Highway Incident Scene" style="width:100%;height:85px;object-fit:cover;display:block;" />
+            <div style="position:absolute;top:5px;left:5px;background:rgba(28,10,10,0.9);color:#fca5a5;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800">
+              🚨 CRISIS TELEMETRY
+            </div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <strong style="color:#ef4444;font-size:13px">${acc.title}</strong>
             <span style="background:rgba(239,68,68,0.25);color:#fca5a5;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800">${acc.severity}</span>
@@ -1262,7 +1274,7 @@ export default function MapView({
             <div>Casualties: <strong>${acc.casualties}</strong></div>
           </div>
           <div style="font-size:11px;color:#facc15;margin-bottom:6px"><strong>Detour:</strong> ${acc.alternateRoute}</div>
-          <button id="btn-sat-acc-${acc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+          <button id="btn-sat-acc-${acc.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
             🛰️ VIEW REAL-TIME SATELLITE PASS
           </button>
         </div>
@@ -1421,7 +1433,16 @@ export default function MapView({
         });
 
         marker.bindPopup(`
-          <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+          <div style="font-size:12px;font-family:Inter,sans-serif;min-width:250px;line-height:1.4">
+            <div style="position:relative;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(56,189,248,0.4);box-shadow:0 3px 10px rgba(0,0,0,0.5)">
+              <img src="/reality/sentinel1_sar_flood.jpg" alt="Copernicus Sentinel-1 SAR Flood Inundation" style="width:100%;height:95px;object-fit:cover;display:block;" />
+              <div style="position:absolute;top:5px;left:5px;background:rgba(8,18,36,0.9);color:#38bdf8;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:0.03em;border:1px solid rgba(56,189,248,0.3)">
+                🛰️ COPERNICUS SAR (LIVE PASS)
+              </div>
+              <div style="position:absolute;bottom:5px;right:5px;background:rgba(239,68,68,0.9);color:#ffffff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800">
+                WATER: +${fz.waterLevelMeters}m
+              </div>
+            </div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
               <strong style="color:#38bdf8;font-size:13px">${fz.name}</strong>
               <span style="background:rgba(56,189,248,0.2);color:#38bdf8;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${fz.floodPercentage}%</span>
@@ -1433,8 +1454,8 @@ export default function MapView({
               <div>Submerged Stretch: <strong>${fz.affectedRoadLengthKm} km</strong></div>
               <div style="margin-top:4px;color:#fb923c;margin-bottom:6px"><strong>Diversion:</strong> ${fz.divertedRoute}</div>
             </div>
-            <button id="btn-sat-flood-${fz.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
-              🛰️ VIEW REAL-TIME SATELLITE ANALYSIS
+            <button id="btn-sat-flood-${fz.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:8px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(147,51,234,0.4)">
+              🛰️ VIEW REAL-TIME SATELLITE VIEW (SAR ANALYSIS)
             </button>
           </div>
         `);
@@ -1630,7 +1651,13 @@ export default function MapView({
       });
 
       marker.bindPopup(`
-        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:220px;line-height:1.4">
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+          <div style="position:relative;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(59,130,246,0.4)">
+            <img src="/reality/flood_drone_recon.jpg" alt="River Crossing Structural Satellite Recon" style="width:100%;height:85px;object-fit:cover;display:block;" />
+            <div style="position:absolute;top:5px;left:5px;background:rgba(15,23,42,0.9);color:#93c5fd;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:800">
+              🛰️ RADAR MONITORING
+            </div>
+          </div>
           <strong style="color:${color};font-size:13px">${b.name}</strong>
           <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">
             <div>River: <strong>${b.riverName}</strong></div>
@@ -1638,8 +1665,8 @@ export default function MapView({
             <div>Condition: <span style="font-weight:700;color:${color}">${b.condition}</span></div>
             <div>Pier Scour Risk: <strong style="color:${color}">${b.risk}/100</strong></div>
           </div>
-          <button id="btn-sat-br-${b.id}" style="width:100%;margin-top:6px;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:6px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
-            🛰️ SATELLITE RADAR ANALYSIS
+          <button id="btn-sat-br-${b.id}" style="width:100%;margin-top:6px;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
+            🛰️ VIEW REAL-TIME SATELLITE RADAR VIEW
           </button>
         </div>
       `);
@@ -1686,7 +1713,16 @@ export default function MapView({
       });
 
       marker.bindPopup(`
-        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:230px;line-height:1.4">
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:250px;line-height:1.4">
+          <div style="position:relative;border-radius:8px;overflow:hidden;margin-bottom:8px;border:1px solid rgba(239,68,68,0.4);box-shadow:0 3px 10px rgba(0,0,0,0.5)">
+            <img src="/reality/flood_drone_recon.jpg" alt="Aerial Drone & Satellite Structural Recon" style="width:100%;height:95px;object-fit:cover;display:block;" />
+            <div style="position:absolute;top:5px;left:5px;background:rgba(15,23,42,0.9);color:#fca5a5;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:800;letter-spacing:0.03em;border:1px solid rgba(239,68,68,0.3)">
+              🛰️ SATELLITE & UAV RECON
+            </div>
+            <div style="position:absolute;bottom:5px;right:5px;background:${isCollapsed ? 'rgba(239,68,68,0.95)' : 'rgba(249,115,22,0.95)'};color:#ffffff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:800">
+              ${isCollapsed ? '💥 COLLAPSED' : `${b.healthPercentage}% INTEGRITY`}
+            </div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <strong style="color:${color};font-size:13px">${b.name}</strong>
             <span style="background:${color}25;color:${color};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:800">${b.condition}</span>
@@ -1698,8 +1734,8 @@ export default function MapView({
             <div>Load Limit: <strong>${b.loadCapacityTons > 0 ? `${b.loadCapacityTons} Tons` : '0 Tons (CLOSED)'}</strong></div>
           </div>
           <div style="font-size:11px;color:#fca5a5;margin-bottom:6px"><strong>Diversion:</strong> ${b.diversion}</div>
-          <button id="btn-sat-bridge-${b.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:7px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(147,51,234,0.3)">
-            🛰️ VIEW REAL-TIME SATELLITE ANALYSIS
+          <button id="btn-sat-bridge-${b.id}" style="width:100%;background:linear-gradient(135deg, #7e22ce 0%, #9333ea 100%);color:#fff;border:none;padding:8px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 3px 10px rgba(147,51,234,0.4)">
+            🛰️ VIEW REAL-TIME SATELLITE VIEW (SAR ANALYSIS)
           </button>
         </div>
       `);

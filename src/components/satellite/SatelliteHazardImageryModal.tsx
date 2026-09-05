@@ -61,10 +61,12 @@ export default function SatelliteHazardImageryModal({
   onNavigateToRoutes,
   onOpenSatelliteHub,
 }: SatelliteHazardImageryModalProps) {
-  const [activeViewMode, setActiveViewMode] = useState<'REALTIME' | 'BASELINE' | 'SLIDER'>('REALTIME');
+  const [activeViewMode, setActiveViewMode] = useState<'MAP' | 'REALTIME' | 'BASELINE' | 'SLIDER'>('MAP');
   const [sliderPos, setSliderPos] = useState(50);
   const isDragging = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const leafletContainerRef = useRef<HTMLDivElement>(null);
+  const leafletMapRef = useRef<any>(null);
 
   // Keyboard shortcut: Escape to close
   useEffect(() => {
@@ -92,6 +94,91 @@ export default function SatelliteHazardImageryModal({
     const percent = Math.round((x / rect.width) * 100);
     setSliderPos(percent);
   }, []);
+
+  // Mount Leaflet Interactive Satellite Map
+  useEffect(() => {
+    if (activeViewMode !== 'MAP' || !leafletContainerRef.current || !hazard) return;
+
+    let mapInstance: any = null;
+    let isCancelled = false;
+
+    import('leaflet').then((L) => {
+      if (isCancelled || !leafletContainerRef.current) return;
+
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
+
+      mapInstance = L.map(leafletContainerRef.current, {
+        center: [hazard.lat, hazard.lng],
+        zoom: 15,
+        zoomControl: true,
+      });
+      leafletMapRef.current = mapInstance;
+
+      // High-resolution real satellite tiles from ArcGIS
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19,
+      }).addTo(mapInstance);
+
+      // Boundaries and label overlay
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Esri Places',
+        maxZoom: 19,
+      }).addTo(mapInstance);
+
+      const color = hazard.category === 'BRIDGE' ? '#ef4444' : hazard.category === 'FLOOD' ? '#38bdf8' : '#f59e0b';
+      const icon = hazard.category === 'BRIDGE' ? '🌉' : hazard.category === 'FLOOD' ? '🌊' : '🚨';
+
+      const pulseIcon = L.divIcon({
+        html: `
+          <div style="position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.4;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
+            <div style="width:26px;height:26px;border-radius:50%;background:#0b1329;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 0 14px ${color};">
+              ${icon}
+            </div>
+          </div>
+        `,
+        className: '',
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+      });
+
+      L.marker([hazard.lat, hazard.lng], { icon: pulseIcon })
+        .bindPopup(`
+          <div style="font-size:12px;font-family:Inter,sans-serif;min-width:200px">
+            <strong style="color:${color};font-size:13px">${hazard.title}</strong>
+            <div style="font-size:11px;color:#cbd5e1;margin-top:2px">Lat: ${hazard.lat.toFixed(4)}°, Lng: ${hazard.lng.toFixed(4)}°</div>
+            <div style="font-size:10px;color:#c084fc;margin-top:4px;font-weight:700">REAL-TIME SATELLITE RADAR COORDINATES</div>
+          </div>
+        `)
+        .addTo(mapInstance)
+        .openPopup();
+
+      L.circle([hazard.lat, hazard.lng], {
+        radius: hazard.category === 'FLOOD' ? 850 : 450,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.22,
+        weight: 2,
+        dashArray: '5, 5',
+      }).addTo(mapInstance);
+
+      setTimeout(() => {
+        if (mapInstance) mapInstance.invalidateSize();
+      }, 250);
+    });
+
+    return () => {
+      isCancelled = true;
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+      }
+    };
+  }, [activeViewMode, hazard]);
 
   if (!isOpen || !hazard) return null;
 
@@ -334,8 +421,29 @@ export default function SatelliteHazardImageryModal({
                 borderRadius: '8px',
                 padding: '3px',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
+                flexWrap: 'wrap',
+                gap: '2px',
               }}
             >
+              <button
+                onClick={() => setActiveViewMode('MAP')}
+                style={{
+                  background: activeViewMode === 'MAP' ? '#22c55e' : 'transparent',
+                  color: activeViewMode === 'MAP' ? '#0b1329' : '#94a3b8',
+                  border: 'none',
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>🌍 Live Satellite Map</span>
+              </button>
               <button
                 onClick={() => setActiveViewMode('REALTIME')}
                 style={{
@@ -353,7 +461,7 @@ export default function SatelliteHazardImageryModal({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <span>🛰️ Live Satellite Pass</span>
+                <span>🛰️ Copernicus SAR Pass</span>
               </button>
               <button
                 onClick={() => setActiveViewMode('BASELINE')}
@@ -372,7 +480,7 @@ export default function SatelliteHazardImageryModal({
                   transition: 'all 0.15s ease',
                 }}
               >
-                <span>☀️ Optical Pre-Disaster Baseline</span>
+                <span>☀️ Optical Baseline</span>
               </button>
               <button
                 onClick={() => setActiveViewMode('SLIDER')}
@@ -392,7 +500,7 @@ export default function SatelliteHazardImageryModal({
                 }}
               >
                 <CompareIcon size={12} color="currentColor" />
-                <span>↔️ Before / After Comparison</span>
+                <span>↔️ Before / After</span>
               </button>
             </div>
           </div>
@@ -402,7 +510,7 @@ export default function SatelliteHazardImageryModal({
             style={{
               position: 'relative',
               width: '100%',
-              height: '380px',
+              height: '400px',
               borderRadius: '12px',
               overflow: 'hidden',
               background: '#030712',
@@ -411,6 +519,36 @@ export default function SatelliteHazardImageryModal({
               userSelect: 'none',
             }}
           >
+            {/* VIEW 0: INTERACTIVE LIVE SATELLITE MAP */}
+            {activeViewMode === 'MAP' && (
+              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <div ref={leafletContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    zIndex: 10,
+                    background: 'rgba(11, 19, 41, 0.88)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(34, 197, 94, 0.5)',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    color: '#f8fafc',
+                    fontFamily: 'var(--font-mono, monospace)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4ade80', fontWeight: 800 }}>
+                    🌍 HIGH-RESOLUTION REAL-WORLD SATELLITE MAP
+                  </div>
+                  <div style={{ color: '#94a3b8', marginTop: '2px' }}>
+                    ArcGIS World Imagery • Sub-Meter Resolution • Live Coordinates
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* VIEW 1: REALTIME SATELLITE PASS */}
             {activeViewMode === 'REALTIME' && (
               <div style={{ position: 'relative', width: '100%', height: '100%' }}>
