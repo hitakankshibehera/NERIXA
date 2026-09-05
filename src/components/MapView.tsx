@@ -1252,20 +1252,7 @@ export default function MapView({
         <MapSearchBox onSelectLocation={handleSelectSearchResult} />
 
         {/* ── Top-Right: Map Mode Switcher & Operational Controls ── */}
-        <div
-          style={{
-            position: 'absolute',
-            top: emergencyMode ? '42px' : '12px',
-            right: '12px',
-            zIndex: 1000,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            flexWrap: 'wrap',
-            maxWidth: 'calc(100vw - 380px)',
-            justifyContent: 'flex-end',
-          }}
-        >
+        <div className={`map-top-controls-container ${emergencyMode ? 'emergency-active' : ''}`}>
           {/* Map Modes */}
           <div
             style={{
@@ -1494,22 +1481,7 @@ export default function MapView({
 
         {/* ── Route Visualization: "WHY THIS ROUTE?" Floating Explanation Card ── */}
         {showWhyThisRoute && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '72px',
-              left: '14px',
-              zIndex: 1000,
-              width: '360px',
-              background: 'rgba(15, 23, 42, 0.96)',
-              border: '1px solid rgba(16, 185, 129, 0.5)',
-              borderRadius: '12px',
-              padding: '14px',
-              boxShadow: '0 16px 36px rgba(0, 0, 0, 0.8)',
-              backdropFilter: 'blur(16px)',
-              color: '#f8fafc',
-            }}
-          >
+          <div className="why-this-route-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <BotIcon size={16} color="#34d399" />

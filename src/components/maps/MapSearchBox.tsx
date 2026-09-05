@@ -102,14 +102,7 @@ export default function MapSearchBox({ onSelectLocation }: MapSearchBoxProps) {
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'absolute',
-        top: '12px',
-        left: '52px',
-        zIndex: 1000,
-        width: '340px',
-        maxWidth: 'calc(100vw - 120px)',
-      }}
+      className="map-search-box-container"
     >
       <div
         style={{

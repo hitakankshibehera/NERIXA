@@ -55,37 +55,40 @@ export const LiveEventTimeline: React.FC<LiveEventTimelineProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[85vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-neutral-850 to-neutral-800 border-b border-neutral-700/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <FiClock className="w-5 h-5 animate-pulse text-cyan-400" />
+        <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-neutral-850 to-neutral-800 border-b border-neutral-700/80 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <FiClock className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse text-cyan-400" />
             </div>
-            <div>
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                Live System Event Timeline
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-bold text-sm sm:text-base text-white truncate">
+                  Live Event Timeline
+                </h3>
+                <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/30 shrink-0">
                   REALTIME BUS
                 </span>
-              </h3>
-              <p className="text-xs text-neutral-400">
-                Audited chronological log generated from actual system events (Section 19)
+              </div>
+              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
+                Audited chronological log generated from actual events (Section 19)
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+            aria-label="Close modal"
+            className="p-1.5 sm:p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition shrink-0"
           >
             <FiX className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Timeline Events Feed */}
-        <div className="p-6 overflow-y-auto space-y-4">
+        {/* Timeline Events List */}
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3 overscroll-contain flex-1 max-h-[75vh]">
           {events.length === 0 ? (
             <div className="text-center py-12 text-neutral-500 text-sm">
               No system events recorded yet. Waiting for live telemetry...

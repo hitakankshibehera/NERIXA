@@ -87,32 +87,34 @@ export const DataSourcesPanel: React.FC<DataSourcesPanelProps> = ({
   const totalConnected = sources.filter(s => s.connected).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[90vh]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-neutral-850 to-neutral-800 border-b border-neutral-700/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <FiActivity className="w-5 h-5" />
+        <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-neutral-850 to-neutral-800 border-b border-neutral-700/80 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <FiActivity className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <h3 className="font-bold text-base text-white flex items-center gap-2">
-                Real-Time Data Sources & Stream Health
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono border border-blue-500/30">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-bold text-sm sm:text-base text-white truncate">
+                  Real-Time Data Sources
+                </h3>
+                <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono border border-blue-500/30 shrink-0">
                   {totalConnected} / {sources.length} ONLINE
                 </span>
-              </h3>
-              <p className="text-xs text-neutral-400">
-                Truthful health monitoring — Never displays connected unless telemetry is verified
+              </div>
+              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
+                Truthful health telemetry • Verified connections only
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition text-xs flex items-center gap-1.5"
+                className="p-1.5 sm:p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition text-xs flex items-center gap-1.5"
                 title="Refresh Stream Health"
               >
                 <FiRefreshCw className="w-3.5 h-3.5" />
@@ -120,7 +122,8 @@ export const DataSourcesPanel: React.FC<DataSourcesPanelProps> = ({
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+              aria-label="Close modal"
+              className="p-1.5 sm:p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
             >
               <FiXCircle className="w-5 h-5" />
             </button>
@@ -128,20 +131,20 @@ export const DataSourcesPanel: React.FC<DataSourcesPanelProps> = ({
         </div>
 
         {/* Public Transit Disclaimer Banner (Section 7 Truthfulness Requirement) */}
-        <div className="bg-neutral-950 px-6 py-3 border-b border-neutral-800 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-neutral-400">
-            <FiSlash className="w-4 h-4 text-amber-500" />
+        <div className="bg-neutral-950 px-3.5 py-2.5 sm:px-6 sm:py-3 border-b border-neutral-800 flex items-center justify-between gap-2 text-xs flex-wrap">
+          <div className="flex items-center gap-2 text-neutral-400 text-[11px] sm:text-xs">
+            <FiSlash className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span>
-              <b className="text-neutral-200">Public Transit (GTFS-RT):</b> LIVE TRANSIT DATA NOT AVAILABLE for Northeastern Hill Region corridors. NERIXA never converts static schedules into fake live locations.
+              <b className="text-neutral-200">Public Transit (GTFS-RT):</b> LIVE TRANSIT DATA NOT AVAILABLE for Northeastern Hill Region.
             </span>
           </div>
-          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
+          <span className="text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
             TRUTHFUL DATA
           </span>
         </div>
 
-        {/* Source Table */}
-        <div className="p-6 overflow-y-auto space-y-3">
+        {/* Content Body */}
+        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3 overscroll-contain flex-1 max-h-[75vh]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {sources.map((source) => (
               <div

@@ -226,22 +226,24 @@ export const DriverTrackingModal: React.FC<DriverTrackingProps> = ({
   const freshness = calculateFreshness(lastTelemetry?.timestamp);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-neutral-800 to-neutral-850 border-b border-neutral-700/80">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
-              <FiNavigation className={`w-5 h-5 ${isTracking ? 'animate-pulse text-emerald-400' : ''}`} />
+        <div className="flex items-center justify-between px-3.5 py-3 sm:px-5 sm:py-4 bg-gradient-to-r from-neutral-800 to-neutral-850 border-b border-neutral-700/80 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <FiNavigation className={`w-4 h-4 sm:w-5 sm:h-5 ${isTracking ? 'animate-pulse text-emerald-400' : ''}`} />
             </div>
-            <div>
-              <h3 className="font-semibold text-base text-white flex items-center gap-2">
-                Driver Telemetry Interface
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-medium border border-emerald-500/30">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="font-semibold text-sm sm:text-base text-white truncate">
+                  Driver Telemetry Cockpit
+                </h3>
+                <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-medium border border-emerald-500/30 shrink-0">
                   REAL GPS
                 </span>
-              </h3>
-              <p className="text-xs text-neutral-400">Hardware GPS synchronization to NERIXA RTDB</p>
+              </div>
+              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">Hardware GPS sync → NERIXA RTDB</p>
             </div>
           </div>
           <button
@@ -249,7 +251,8 @@ export const DriverTrackingModal: React.FC<DriverTrackingProps> = ({
               stopTracking();
               onClose();
             }}
-            className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
+            aria-label="Close modal"
+            className="p-1.5 sm:p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition shrink-0"
           >
             <FiX className="w-5 h-5" />
           </button>
@@ -281,9 +284,9 @@ export const DriverTrackingModal: React.FC<DriverTrackingProps> = ({
         )}
 
         {/* Content Body */}
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[75vh]">
+        <div className="p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto max-h-[80vh] flex-1 overscroll-contain">
           {/* Vehicle Selector */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block mb-1">
                 Vehicle ID

@@ -320,10 +320,14 @@ function Sidebar({
   activePage,
   onNavigate,
   portalRole = 'CUSTOMER',
+  isOpen = false,
+  onClose,
 }: {
   activePage: string;
   onNavigate: (page: string) => void;
   portalRole?: PortalRole;
+  isOpen?: boolean;
+  onClose?: () => void;
 }) {
   const { user, alerts, demoState, language, imageIntelSummary, satelliteSummary } = useApp();
   const config = PORTAL_CONFIGS[portalRole] || PORTAL_CONFIGS.CUSTOMER;
@@ -350,7 +354,7 @@ function Sidebar({
   const navItems = allNavItems.filter(item => config.allowedNavItems.includes(item.id));
 
   return (
-    <aside className="app-sidebar">
+    <aside className={`app-sidebar ${isOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon" style={{ background: config.badgeColor }}>
           <ShieldIcon size={18} color="#ffffff" />
@@ -361,6 +365,15 @@ function Sidebar({
             {config.badge}
           </div>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="mobile-close-sidebar-btn"
+            aria-label="Close sidebar"
+          >
+            <CloseIcon size={16} color="#94a3b8" />
+          </button>
+        )}
       </div>
       <nav className="sidebar-nav">
         <div className="sidebar-section">
@@ -374,7 +387,10 @@ function Sidebar({
               <button
                 key={item.id}
                 className={`sidebar-link ${isActive ? 'active' : ''}`}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => {
+                  onNavigate(item.id);
+                  onClose?.();
+                }}
               >
                 <IconComponent size={16} />
                 <span>{item.label}</span>
@@ -409,6 +425,7 @@ function Header({
   onOpenDataSources,
   onOpenTimeline,
   onOpenFieldEvidence,
+  onToggleMobileNav,
 }: { 
   onCommanderToggle: () => void; 
   commanderOpen: boolean; 
@@ -419,6 +436,7 @@ function Header({
   onOpenDataSources?: () => void;
   onOpenTimeline?: () => void;
   onOpenFieldEvidence?: () => void;
+  onToggleMobileNav?: () => void;
 }) {
   const {
     user,
@@ -445,6 +463,20 @@ function Header({
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {onToggleMobileNav && (
+          <button
+            className="mobile-menu-btn"
+            onClick={onToggleMobileNav}
+            aria-label="Toggle Navigation"
+            title="Navigation Menu"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
           <ShieldIcon size={15} color="#38bdf8" />
           <span style={{ fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.04em', color: '#f8fafc' }}>
@@ -521,9 +553,7 @@ function Header({
         </div>
       </div>
 
-      <div style={{ flex: 1 }} />
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div className="header-actions-scroll">
         {/* Section 23: SIH 13-Step Demonstartion Trigger */}
         <button
           className="btn btn-sm"
@@ -1524,12 +1554,7 @@ function DashboardPage({
       </div>
 
       {/* Section 18: Live Command Center Cards Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-        gap: '0.625rem',
-        marginBottom: '1rem',
-      }}>
+      <div className="section18-cards-grid">
         {section18Kpis.map((kpi, i) => (
           <div
             key={i}
@@ -2623,6 +2648,7 @@ export default function NERCommandApp({
   const [realityModalOpen, setRealityModalOpen] = useState(false);
   const [realityFeedIndex, setRealityFeedIndex] = useState(0);
   const [weatherModalOpen, setWeatherModalOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   // Real-Time Fleet & Evidence Modals (Section 1, 10, 17, 19)
   const [driverModalOpen, setDriverModalOpen] = useState(false);
@@ -2688,7 +2714,16 @@ export default function NERCommandApp({
 
   return (
     <div className="app-layout" data-theme={theme}>
-      <Sidebar activePage={activePage} onNavigate={setActivePage} portalRole={portalRole} />
+      {mobileNavOpen && (
+        <div className="sidebar-backdrop" onClick={() => setMobileNavOpen(false)} />
+      )}
+      <Sidebar 
+        activePage={activePage} 
+        onNavigate={setActivePage} 
+        portalRole={portalRole} 
+        isOpen={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+      />
       <div className="app-main">
         <Header 
           onCommanderToggle={() => setCommanderOpen(!commanderOpen)} 
@@ -2700,6 +2735,7 @@ export default function NERCommandApp({
           onOpenDataSources={() => setDataSourcesModalOpen(true)}
           onOpenTimeline={() => setTimelineModalOpen(true)}
           onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
+          onToggleMobileNav={() => setMobileNavOpen(!mobileNavOpen)}
         />
         <main className="app-content">
           {renderPage()}
