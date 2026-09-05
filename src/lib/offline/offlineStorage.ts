@@ -86,3 +86,39 @@ export function setSimulatedOfflineState(offline: boolean): void {
   if (!isStorageAvailable()) return;
   localStorage.setItem(OFFLINE_SIM_KEY, offline ? 'true' : 'false');
 }
+
+// ── GPS Fleet Telemetry Queue ──
+const TELEMETRY_QUEUE_KEY = 'nerixa_offline_telemetry_queue_v1';
+
+export async function enqueueOfflineTelemetry(telemetry: any): Promise<void> {
+  if (!isStorageAvailable()) return;
+  try {
+    const current = await getOfflineTelemetryQueue();
+    const updated = [...current, { ...telemetry, is_queued_historical: true }];
+    localStorage.setItem(TELEMETRY_QUEUE_KEY, JSON.stringify(updated));
+  } catch (err) {
+    console.error('[OfflineStorage] Failed to enqueue telemetry:', err);
+  }
+}
+
+export async function getOfflineTelemetryQueue(): Promise<any[]> {
+  if (!isStorageAvailable()) return [];
+  try {
+    const raw = localStorage.getItem(TELEMETRY_QUEUE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('[OfflineStorage] Failed to read telemetry queue:', err);
+    return [];
+  }
+}
+
+export async function clearOfflineTelemetryQueue(): Promise<void> {
+  if (!isStorageAvailable()) return;
+  try {
+    localStorage.removeItem(TELEMETRY_QUEUE_KEY);
+  } catch (err) {
+    console.error('[OfflineStorage] Failed to clear telemetry queue:', err);
+  }
+}
+

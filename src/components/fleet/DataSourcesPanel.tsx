@@ -1,21 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { DataSourceStatus } from '@/lib/types';
 import {
   FiActivity,
-  FiCheckCircle,
-  FiAlertCircle,
   FiRefreshCw,
-  FiXCircle,
-  FiRadio,
-  FiCloudRain,
-  FiCompass,
-  FiMapPin,
-  FiCamera,
-  FiLayers,
+  FiX,
+  FiWifi,
   FiTruck,
-  FiSlash
+  FiCloudRain,
+  FiRadio,
+  FiCamera,
+  FiMap,
+  FiSlash,
+  FiCheckCircle,
+  FiAlertTriangle,
+  FiXCircle,
 } from '@/components/common/FeatherIcons';
 
 interface DataSourcesPanelProps {
@@ -31,170 +31,423 @@ export const DataSourcesPanel: React.FC<DataSourcesPanelProps> = ({
   onClose,
   onRefresh,
 }) => {
+  // ESC key listener to safely dismiss modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const getSourceIcon = (id: string) => {
     switch (id) {
-      case 'GPS_FLEET': return <FiTruck className="w-4 h-4 text-emerald-400" />;
-      case 'GOOGLE_TRAFFIC': return <FiActivity className="w-4 h-4 text-rose-400" />;
-      case 'GOOGLE_ROUTES': return <FiCompass className="w-4 h-4 text-blue-400" />;
-      case 'WEATHER': return <FiCloudRain className="w-4 h-4 text-cyan-400" />;
-      case 'SENTINEL_1': return <FiRadio className="w-4 h-4 text-indigo-400" />;
-      case 'SENTINEL_2': return <FiLayers className="w-4 h-4 text-teal-400" />;
-      case 'FIELD_OFFICERS': return <FiCamera className="w-4 h-4 text-amber-400" />;
-      case 'ROAD_NETWORK': return <FiMapPin className="w-4 h-4 text-orange-400" />;
-      case 'PUBLIC_TRANSIT': return <FiSlash className="w-4 h-4 text-neutral-400" />;
-      default: return <FiActivity className="w-4 h-4 text-neutral-400" />;
+      case 'GPS_FLEET':
+        return <FiTruck size={16} color="#38bdf8" />;
+      case 'GOOGLE_TRAFFIC':
+        return <FiActivity size={16} color="#22c55e" />;
+      case 'WEATHER_API':
+        return <FiCloudRain size={16} color="#06b6d4" />;
+      case 'SENTINEL_1':
+      case 'SENTINEL_2':
+        return <FiRadio size={16} color="#a855f7" />;
+      case 'FIELD_OFFICERS':
+        return <FiCamera size={16} color="#10b981" />;
+      case 'ROAD_NETWORK':
+        return <FiMap size={16} color="#f59e0b" />;
+      case 'PUBLIC_TRANSIT':
+        return <FiSlash size={16} color="#f43f5e" />;
+      default:
+        return <FiWifi size={16} color="#94a3b8" />;
     }
   };
 
   const getStatusBadge = (source: DataSourceStatus) => {
-    if (source.id === 'PUBLIC_TRANSIT' && source.status === 'UNAVAILABLE') {
-      return (
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-800 text-neutral-400 border border-neutral-700">
-          NOT AVAILABLE
-        </span>
-      );
-    }
     switch (source.status) {
       case 'CONNECTED':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> CONNECTED
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: 'rgba(34, 197, 94, 0.15)',
+              border: '1px solid rgba(34, 197, 94, 0.4)',
+              color: '#4ade80',
+              fontSize: '10px',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
+            CONNECTED
           </span>
         );
       case 'SYNCING':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-            <FiRefreshCw className="w-2.5 h-2.5 animate-spin" /> SYNCING
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: 'rgba(234, 179, 8, 0.15)',
+              border: '1px solid rgba(234, 179, 8, 0.4)',
+              color: '#facc15',
+              fontSize: '10px',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#eab308' }} />
+            SYNCING
           </span>
         );
-      case 'ERROR':
+      case 'UNAVAILABLE':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center gap-1">
-            <FiAlertCircle className="w-2.5 h-2.5" /> ERROR
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#f87171',
+              fontSize: '10px',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }} />
+            UNAVAILABLE
           </span>
         );
+      case 'DISCONNECTED':
+      case 'ERROR':
       default:
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-neutral-800 text-neutral-400 border border-neutral-700">
-            DISCONNECTED
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              background: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#f87171',
+              fontSize: '10px',
+              fontWeight: 800,
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444' }} />
+            {source.status || 'OFFLINE'}
           </span>
         );
     }
   };
 
-  const totalConnected = sources.filter(s => s.connected).length;
+  const totalConnected = sources.filter((s) => s.connected).length;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl bg-neutral-900 border border-neutral-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col text-neutral-100 max-h-[92vh]">
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'rgba(3, 7, 18, 0.85)',
+        backdropFilter: 'blur(10px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '860px',
+          maxHeight: '90vh',
+          background: 'var(--bg-secondary, #0f172a)',
+          border: '1px solid rgba(56, 189, 248, 0.35)',
+          borderRadius: '16px',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(56, 189, 248, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'fadeIn 0.2s ease-out',
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-neutral-850 to-neutral-800 border-b border-neutral-700/80 shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 pr-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-              <FiActivity className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div
+          style={{
+            padding: '1.125rem 1.5rem',
+            background: 'linear-gradient(90deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.95) 100%)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FiActivity size={18} color="#38bdf8" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="font-bold text-sm sm:text-base text-white truncate">
-                  Real-Time Data Sources
-                </h3>
-                <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono border border-blue-500/30 shrink-0">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.02em' }}>
+                  Real-Time Data Sources & Health
+                </h2>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '2px 8px',
+                    borderRadius: '9999px',
+                    background: 'rgba(56, 189, 248, 0.2)',
+                    border: '1px solid rgba(56, 189, 248, 0.5)',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: '#38bdf8',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8', animation: 'pulse 1.2s infinite' }} />
                   {totalConnected} / {sources.length} ONLINE
                 </span>
               </div>
-              <p className="text-[11px] sm:text-xs text-neutral-400 truncate">
-                Truthful health telemetry • Verified connections only
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                Truthful connection metrics • Real hardware pings and API status (Requirement 27)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {onRefresh && (
               <button
                 onClick={onRefresh}
-                className="p-1.5 sm:p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition text-xs flex items-center gap-1.5"
-                title="Refresh Stream Health"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#cbd5e1',
+                  borderRadius: '8px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                title="Refresh stream status"
               >
-                <FiRefreshCw className="w-3.5 h-3.5" />
+                <FiRefreshCw size={13} />
+                <span>Refresh</span>
               </button>
             )}
+
             <button
               onClick={onClose}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#cbd5e1',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                fontWeight: 700,
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
               aria-label="Close modal"
-              className="p-1.5 sm:p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 transition"
             >
-              <FiXCircle className="w-5 h-5" />
+              <FiX size={14} />
+              <span>Close</span>
             </button>
           </div>
         </div>
 
-        {/* Public Transit Disclaimer Banner (Section 7 Truthfulness Requirement) */}
-        <div className="bg-neutral-950 px-3.5 py-2.5 sm:px-6 sm:py-3 border-b border-neutral-800 flex items-center justify-between gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-2 text-neutral-400 text-[11px] sm:text-xs">
-            <FiSlash className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        {/* Public Transit Disclaimer Banner */}
+        <div
+          style={{
+            background: 'rgba(15, 23, 42, 0.75)',
+            padding: '8px 1.5rem',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px',
+            fontSize: '11px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+            <FiSlash size={14} color="#f59e0b" />
             <span>
-              <b className="text-neutral-200">Public Transit (GTFS-RT):</b> LIVE TRANSIT DATA NOT AVAILABLE for Northeastern Hill Region.
+              <strong style={{ color: '#f8fafc' }}>Public Transit (GTFS-RT):</strong> LIVE TRANSIT DATA NOT AVAILABLE for Northeastern Mountain Sectors. Anti-fabrication principle enforced.
             </span>
           </div>
-          <span className="text-[9px] sm:text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
-            TRUTHFUL DATA
+          <span
+            style={{
+              padding: '2px 8px',
+              borderRadius: '4px',
+              background: 'rgba(245, 158, 11, 0.15)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              color: '#fbbf24',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontWeight: 800,
+              fontSize: '10px',
+            }}
+          >
+            VERIFIED TRUTH
           </span>
         </div>
 
-        {/* Content Body */}
-        <div className="p-3.5 sm:p-6 overflow-y-auto space-y-3 overscroll-contain flex-1 max-h-[75vh]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {sources.map((source) => (
-              <div
-                key={source.id}
-                className="p-4 rounded-xl bg-neutral-800/50 border border-neutral-700/60 hover:border-neutral-600 transition flex flex-col justify-between space-y-2.5"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-lg bg-neutral-900 border border-neutral-700">
-                      {getSourceIcon(source.id)}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-xs text-white">{source.name}</h4>
-                      <span className="text-[10px] text-neutral-400 font-mono uppercase">{source.category}</span>
+        {/* Sources Grid */}
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            overflowY: 'auto',
+            flex: 1,
+            maxHeight: '68vh',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gap: '12px',
+          }}
+        >
+          {sources.map((source) => (
+            <div
+              key={source.id}
+              style={{
+                background: 'rgba(255, 255, 255, 0.025)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {getSourceIcon(source.id)}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: '#f8fafc' }}>
+                      {source.name}
+                    </h4>
+                    <div style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+                      {source.category}
                     </div>
                   </div>
-                  {getStatusBadge(source)}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-neutral-700/40">
-                  <div>
-                    <span className="text-neutral-500 block text-[10px] uppercase">Freshness:</span>
-                    <span className="font-mono text-neutral-300 font-medium">{source.freshnessLabel}</span>
-                  </div>
-                  <div>
-                    <span className="text-neutral-500 block text-[10px] uppercase">Records Sync:</span>
-                    <span className="font-mono text-neutral-300 font-medium">
-                      {source.recordsReceived.toLocaleString()} events
-                    </span>
-                  </div>
-                </div>
-
-                {source.notes && (
-                  <p className="text-[10px] text-neutral-400 bg-neutral-900/60 p-2 rounded-lg border border-neutral-800">
-                    {source.notes}
-                  </p>
-                )}
+                {getStatusBadge(source)}
               </div>
-            ))}
-          </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '8px',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  padding: '8px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                }}
+              >
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', display: 'block' }}>Freshness:</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: '#f8fafc', fontWeight: 600 }}>{source.freshnessLabel}</span>
+                </div>
+                <div>
+                  <span style={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', display: 'block' }}>Telemetry Sync:</span>
+                  <span style={{ fontFamily: 'var(--font-mono)', color: '#38bdf8', fontWeight: 600 }}>
+                    {source.recordsReceived.toLocaleString()} packets
+                  </span>
+                </div>
+              </div>
+
+              {source.notes && (
+                <div style={{ fontSize: '11px', color: '#cbd5e1', background: 'rgba(255, 255, 255, 0.02)', padding: '6px 8px', borderRadius: '4px' }}>
+                  {source.notes}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between text-xs text-neutral-400">
-          <span>Decoupled Data Architecture • Supports WebSockets & RTDB Pub/Sub</span>
+        <div
+          style={{
+            padding: '0.875rem 1.5rem',
+            background: 'rgba(15, 23, 42, 0.95)',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            fontSize: '11px',
+            color: '#64748b',
+          }}
+        >
+          <div>
+            Decoupled Architecture • WebSockets, Firebase RTDB Pub/Sub, and IMD/CWC APIs
+          </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-xs font-semibold transition"
+            style={{
+              background: '#38bdf8',
+              color: '#0f172a',
+              border: 'none',
+              padding: '6px 16px',
+              borderRadius: '6px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontSize: '11px',
+            }}
           >
-            Close
+            Return to Command Center
           </button>
         </div>
       </div>

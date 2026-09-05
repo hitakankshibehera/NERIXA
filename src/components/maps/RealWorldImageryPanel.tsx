@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Road, RiskPrediction } from '@/lib/types';
 import type { VisualHistoryEvent, AIVisualVerification } from '@/lib/types/googleMaps';
 import { getRiskColor, getRiskLevel } from '@/lib/constants';
@@ -43,6 +43,15 @@ export default function RealWorldImageryPanel({
 }: RealWorldImageryPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'verification'>('overview');
   const [selectedTimelineEvent, setSelectedTimelineEvent] = useState<VisualHistoryEvent | null>(null);
+
+  // Keyboard shortcut: Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const currentRisk = prediction?.currentRisk ?? 45;
   const accessibility = prediction?.accessibilityScore ?? 65;

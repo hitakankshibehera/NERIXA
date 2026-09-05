@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/lib/store/AppContext';
 import { getRiskColor } from '@/lib/constants';
 import {
@@ -26,6 +26,14 @@ export default function WeatherTelemetryModal({ onClose, onNavigateRoutes }: Wea
   const { liveWeatherReports, weatherLastUpdated, weatherProvider, refreshLiveWeather } = useApp();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedState, setSelectedState] = useState<string>('ALL');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

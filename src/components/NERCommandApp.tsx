@@ -1057,6 +1057,14 @@ function GroundRealityModal({
   const [advisorySent, setAdvisorySent] = useState(false);
   const feed = REALITY_FEEDS[feedIndex] || REALITY_FEEDS[0];
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const handleSendAdvisory = () => {
     setAdvisorySent(true);
     setTimeout(() => setAdvisorySent(false), 3500);
