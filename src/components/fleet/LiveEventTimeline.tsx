@@ -196,9 +196,12 @@ export const LiveEventTimeline: React.FC<LiveEventTimelineProps> = ({
             display: 'flex',
             background: 'rgba(15, 23, 42, 0.6)',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '0.5rem 1.25rem',
+            padding: '0.5rem 1rem',
             gap: '8px',
             overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {[
@@ -220,6 +223,7 @@ export const LiveEventTimeline: React.FC<LiveEventTimelineProps> = ({
                 fontWeight: 700,
                 fontSize: '11px',
                 cursor: 'pointer',
+                flexShrink: 0,
               }}
             >
               {tab.label}

@@ -530,7 +530,10 @@ export default function MapView({
   const [isSplitView, setIsSplitView] = useState(false);
   const [emergencyMode, setEmergencyMode] = useState(false);
   const [layerMenuOpen, setLayerMenuOpen] = useState(false);
-  const [legendOpen, setLegendOpen] = useState(true);
+  const [legendOpen, setLegendOpen] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return false;
+    return true;
+  });
 
   // Selected Entities
   const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
@@ -1861,6 +1864,10 @@ export default function MapView({
               padding: '3px',
               boxShadow: '0 12px 28px rgba(0, 0, 0, 0.7)',
               backdropFilter: 'blur(20px)',
+              overflowX: 'auto',
+              maxWidth: 'calc(100vw - 110px)',
+              scrollbarWidth: 'none',
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {(Object.keys(MAP_MODES_CONFIG) as MapMode[]).map((mode) => {
@@ -1896,6 +1903,7 @@ export default function MapView({
                     background: isActive ? 'rgba(2, 132, 199, 0.22)' : 'transparent',
                     color: isActive ? '#38bdf8' : '#94a3b8',
                     transition: 'all 0.15s ease',
+                    flexShrink: 0,
                   }}
                 >
                   <Icon size={13} color={isActive ? '#38bdf8' : '#94a3b8'} />

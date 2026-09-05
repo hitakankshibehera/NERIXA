@@ -338,7 +338,7 @@ export const DataSourcesPanel: React.FC<DataSourcesPanelProps> = ({
             flex: 1,
             maxHeight: '68vh',
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: '12px',
           }}
         >

@@ -73,6 +73,14 @@ export default function LiveSurveillanceDock({
   onToggleCollapse,
 }: LiveSurveillanceDockProps) {
   const [activeTab, setActiveTab] = useState<'surveillance' | 'commander'>('surveillance');
+  const [localCollapsed, setLocalCollapsed] = useState<boolean>(false);
+
+  // Automatically start minimized on mobile screens so user can see and pan the map
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setLocalCollapsed(true);
+    }
+  }, []);
 
   // AI Commander conversation state
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'ai'; text: string; suggestions?: string[] }>>([
@@ -112,12 +120,13 @@ export default function LiveSurveillanceDock({
     }, 250);
   };
 
-  if (isCollapsed) {
+  if (isCollapsed || localCollapsed) {
     return (
       <div
+        className="live-surveillance-dock-minimized"
         style={{
           position: 'absolute',
-          top: '64px',
+          bottom: '16px',
           right: '12px',
           zIndex: 990,
           display: 'flex',
@@ -126,26 +135,38 @@ export default function LiveSurveillanceDock({
         }}
       >
         <button
-          onClick={onToggleCollapse}
+          onClick={() => {
+            setLocalCollapsed(false);
+            onToggleCollapse?.();
+          }}
           style={{
             background: 'rgba(8, 12, 22, 0.94)',
-            border: '1px solid rgba(56, 189, 248, 0.4)',
-            borderRadius: '10px',
+            border: '1px solid rgba(56, 189, 248, 0.45)',
+            borderRadius: '24px',
             color: '#38bdf8',
-            padding: '8px 12px',
+            padding: '6px 14px',
             fontSize: '11px',
             fontWeight: 800,
             cursor: 'pointer',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.7)',
             backdropFilter: 'blur(16px)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '8px',
           }}
           title="Open Live Surveillance & AI Commander Dock"
         >
+          <span
+            style={{
+              width: '7px',
+              height: '7px',
+              borderRadius: '50%',
+              background: operationalMode === 'LIVE_DATA' ? '#10b981' : '#f59e0b',
+            }}
+          />
           <ShieldIcon size={14} color="#38bdf8" />
-          <span>SURVEILLANCE DOCK</span>
+          <span>SURVEILLANCE & AI DOCK</span>
+          <span style={{ fontSize: '9px', background: 'rgba(56, 189, 248, 0.2)', padding: '2px 6px', borderRadius: '8px' }}>▲</span>
         </button>
       </div>
     );
@@ -210,23 +231,29 @@ export default function LiveSurveillanceDock({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#94a3b8',
-                borderRadius: '6px',
-                padding: '3px 7px',
-                fontSize: '10px',
-                cursor: 'pointer',
-              }}
-              title="Minimize panel"
-            >
-              Minimize
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setLocalCollapsed(true);
+              onToggleCollapse?.();
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#94a3b8',
+              borderRadius: '6px',
+              padding: '3px 8px',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title="Minimize panel to view full map"
+          >
+            <span>▼</span>
+            <span>Minimize</span>
+          </button>
           {hasSelectedEntity && onCloseSelection && (
             <button
               onClick={onCloseSelection}
