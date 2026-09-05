@@ -167,31 +167,148 @@ function createVehicleIcon(vehicle: Vehicle): L.DivIcon {
 }
 
 // ── Google Maps & High-Res Tile Providers ──
-const MAP_MODES_CONFIG: Record<MapMode, { label: string; esriTileUrl?: string; subdomains?: string; attribution?: string }> = {
+const MAP_MODES_CONFIG: Record<
+  MapMode,
+  {
+    label: string;
+    tileUrl?: string;
+    subdomains?: string;
+    attribution?: string;
+    maxZoom?: number;
+    overlayUrls?: Array<{ url: string; attribution?: string; maxZoom?: number }>;
+  }
+> = {
   roadmap: {
     label: 'Roadmap',
-    esriTileUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenStreetMap contributors',
+    tileUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    attribution: '© OpenStreetMap contributors, © CARTO',
+    maxZoom: 19,
   },
   satellite: {
     label: 'Satellite',
-    esriTileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Esri, Maxar, Earthstar Geographics, Copernicus',
+    tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, Maxar, Earthstar Geographics, Copernicus Sentinel',
+    maxZoom: 18,
   },
   hybrid: {
     label: 'Hybrid',
-    esriTileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Esri, Maxar, OpenStreetMap',
+    tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, Maxar, OpenStreetMap, HERE, Garmin',
+    maxZoom: 18,
+    overlayUrls: [
+      {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Esri Boundaries & Places',
+        maxZoom: 18,
+      },
+      {
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+        attribution: 'Esri Transportation',
+        maxZoom: 18,
+      },
+    ],
   },
   terrain: {
     label: 'Terrain',
-    esriTileUrl: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    attribution: '© OpenTopoMap contributors',
+    tileUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri World Topo, USGS, Intermap, OpenStreetMap contributors',
+    maxZoom: 18,
+  },
+  dark: {
+    label: 'Dark / Ops',
+    tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    attribution: '© CARTO Dark Matter, OpenStreetMap contributors',
+    maxZoom: 19,
+  },
+  nerixa_intel: {
+    label: 'NERIXA Intel',
+    tileUrl: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    subdomains: 'abcd',
+    attribution: 'NERIXA Strategic Intelligence Hub • GIS Tactical Grid',
+    maxZoom: 19,
   },
   streetview: {
     label: 'Street View',
   },
 };
+
+// ── Mountain Passes & Elevation Strategic Points ──
+const MOUNTAIN_PASSES = [
+  {
+    id: 'pass-sela',
+    name: 'Sela Pass (NH-13 Corridor)',
+    state: 'Arunachal Pradesh',
+    elevation: 4170,
+    slope: '18%',
+    terrain: 'High Alpine Mountain Pass',
+    landslideRisk: 'EXTREME (Snowmelt & Freeze-Thaw)',
+    status: 'OPEN WITH CAUTION',
+    coords: [27.50, 92.10] as L.LatLngTuple,
+    weather: 'Sub-zero temperatures, dense mist',
+  },
+  {
+    id: 'pass-bomdila',
+    name: 'Bomdila Pass (NH-15 Axis)',
+    state: 'Arunachal Pradesh',
+    elevation: 2850,
+    slope: '14%',
+    terrain: 'Rugged Steep Mountain Ridge',
+    landslideRisk: 'HIGH (Active 14,500 m³ Debris Slip)',
+    status: 'BLOCKED / REROUTE RECOMMENDED',
+    coords: [27.26, 92.42] as L.LatLngTuple,
+    weather: 'Heavy monsoon downpour (14 mm/h)',
+  },
+  {
+    id: 'pass-nathula',
+    name: 'Nathu La Pass',
+    state: 'Sikkim',
+    elevation: 4310,
+    slope: '16%',
+    terrain: 'Glaciated Himalayan Ridge',
+    landslideRisk: 'MODERATE',
+    status: 'CONTROLLED MILITARY CONVOY TRANSIT',
+    coords: [27.38, 88.83] as L.LatLngTuple,
+    weather: 'Freezing, high-velocity winds',
+  },
+  {
+    id: 'pass-pangsau',
+    name: 'Pangsau Pass (Stilwell Road)',
+    state: 'Arunachal Pradesh',
+    elevation: 1136,
+    slope: '11%',
+    terrain: 'Dense Subtropical Rainforest Ridge',
+    landslideRisk: 'MODERATE (Flash Soil Slip)',
+    status: 'OPERATIONAL',
+    coords: [27.25, 96.15] as L.LatLngTuple,
+    weather: 'Warm rain, high humidity',
+  },
+  {
+    id: 'pass-shillong',
+    name: 'Shillong Peak & Laitkor Saddle',
+    state: 'Meghalaya',
+    elevation: 1965,
+    slope: '9%',
+    terrain: 'Highland Plateau Escarpment',
+    landslideRisk: 'LOW-MODERATE',
+    status: 'OPEN',
+    coords: [25.54, 91.88] as L.LatLngTuple,
+    weather: 'Continuous cloud cover, drizzle',
+  },
+];
+
+// ── 8 North Eastern State Geofences ──
+const NER_STATE_GEOFENCES = [
+  { id: 'geo-assam', name: 'Assam', stateCode: 'AS', capital: 'Dispur / Guwahati', center: [26.14, 91.79] as L.LatLngTuple, bounds: [[25.8, 89.8], [27.9, 95.8]], color: '#38bdf8' },
+  { id: 'geo-arunachal', name: 'Arunachal Pradesh', stateCode: 'AR', capital: 'Itanagar', center: [27.08, 93.60] as L.LatLngTuple, bounds: [[26.7, 91.5], [29.4, 97.4]], color: '#f59e0b' },
+  { id: 'geo-meghalaya', name: 'Meghalaya', stateCode: 'ML', capital: 'Shillong', center: [25.57, 91.88] as L.LatLngTuple, bounds: [[25.0, 89.8], [26.1, 92.8]], color: '#10b981' },
+  { id: 'geo-manipur', name: 'Manipur', stateCode: 'MN', capital: 'Imphal', center: [24.81, 93.93] as L.LatLngTuple, bounds: [[23.8, 93.0], [25.7, 94.8]], color: '#a855f7' },
+  { id: 'geo-mizoram', name: 'Mizoram', stateCode: 'MZ', capital: 'Aizawl', center: [23.73, 92.71] as L.LatLngTuple, bounds: [[21.9, 92.2], [24.5, 93.5]], color: '#06b6d4' },
+  { id: 'geo-nagaland', name: 'Nagaland', stateCode: 'NL', capital: 'Kohima', center: [25.67, 94.10] as L.LatLngTuple, bounds: [[25.2, 93.3], [27.0, 95.2]], color: '#f97316' },
+  { id: 'geo-tripura', name: 'Tripura', stateCode: 'TR', capital: 'Agartala', center: [23.83, 91.28] as L.LatLngTuple, bounds: [[22.9, 91.1], [24.5, 92.3]], color: '#ec4899' },
+  { id: 'geo-sikkim', name: 'Sikkim', stateCode: 'SK', capital: 'Gangtok', center: [27.33, 88.61] as L.LatLngTuple, bounds: [[27.0, 88.0], [28.1, 88.9]], color: '#84cc16' },
+];
 
 // ── Geospatial Disaster Polygons ──
 const DISASTER_POLYGONS = [
@@ -323,15 +440,42 @@ const DRONE_FEEDS = [
 interface MapViewProps {
   fullscreen?: boolean;
   onSelectIncident?: (incident: Incident) => void;
+  onSelectVehicle?: (vehicle: Vehicle) => void;
+  onSelectRoad?: (road: Road) => void;
+  onSelectLocationIntel?: (intel: LocationIntelligence) => void;
   onOpenRealityRecon?: (camIndex?: number) => void;
   onOpenWeatherModal?: () => void;
   onOpenImageIntel?: () => void;
   onOpenSatelliteIntel?: () => void;
 }
 
+const DEFAULT_OPERATIONAL_LAYERS = [
+  'roads',
+  'traffic',
+  'roadRisk',
+  'bridges',
+  'vehicles',
+  'shipments',
+  'incidents',
+  'fieldReports',
+  'floodZones',
+  'landslideZones',
+  'weather',
+  'satelliteAI',
+  'criticalInfrastructure',
+  'warehouses',
+  'hospitals',
+  'emergencyCorridors',
+  'elevation',
+  'geofences',
+];
+
 export default function MapView({
   fullscreen,
   onSelectIncident,
+  onSelectVehicle,
+  onSelectRoad,
+  onSelectLocationIntel,
   onOpenRealityRecon,
   onOpenWeatherModal,
   onOpenImageIntel,
@@ -341,6 +485,7 @@ export default function MapView({
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const overlayTileLayersRef = useRef<L.TileLayer[]>([]);
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
 
   // Global Context State
@@ -364,10 +509,18 @@ export default function MapView({
   } = useApp();
 
   // ── Operational Map States ──
-  const [mapMode, setMapMode] = useState<MapMode>('satellite');
+  const [mapMode, setMapMode] = useState<MapMode>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nerixa_map_mode');
+      if (saved && saved in MAP_MODES_CONFIG) return saved as MapMode;
+    }
+    return 'satellite';
+  });
+
   const [isSplitView, setIsSplitView] = useState(false);
   const [emergencyMode, setEmergencyMode] = useState(false);
-  const [satelliteOpacity, setSatelliteOpacity] = useState(0.55);
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(true);
 
   // Selected Entities
   const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
@@ -386,30 +539,20 @@ export default function MapView({
 
   // HUD & PIP
   const [showFleetHud, setShowFleetHud] = useState(true);
-  const [showPerformanceHud, setShowPerformanceHud] = useState(true);
-  const [activeDroneIndex, setActiveDroneIndex] = useState(0);
-  const [pipMinimized, setPipMinimized] = useState(false);
 
-  // 15 Intelligence Layer Toggles
-  const [activeLayers, setActiveLayers] = useState<Set<string>>(
-    new Set([
-      'roads',
-      'roadRisk',
-      'bridges',
-      'vehicles',
-      'shipments',
-      'incidents',
-      'fieldReports',
-      'floodZones',
-      'landslideZones',
-      'weather',
-      'satelliteAI',
-      'criticalInfrastructure',
-      'warehouses',
-      'hospitals',
-      'emergencyCorridors',
-    ])
-  );
+  // 17 Intelligence Layer Toggles with Persistence
+  const [activeLayers, setActiveLayers] = useState<Set<string>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nerixa_active_layers');
+        if (saved) {
+          const arr = JSON.parse(saved);
+          if (Array.isArray(arr) && arr.length > 0) return new Set(arr);
+        }
+      } catch {}
+    }
+    return new Set(DEFAULT_OPERATIONAL_LAYERS);
+  });
 
   // Admin Config State
   const [adminConfig, setAdminConfig] = useState<AdminMapConfig>({
@@ -437,10 +580,13 @@ export default function MapView({
       warehouses: true,
       hospitals: true,
       emergencyCorridors: true,
+      traffic: true,
+      elevation: true,
+      geofences: true,
     },
   });
 
-  // Toggle Layer Helper
+  // Toggle Layer Helper with Persistence
   const toggleLayer = (layerId: string) => {
     setActiveLayers((prev) => {
       const next = new Set(prev);
@@ -449,8 +595,19 @@ export default function MapView({
       } else {
         next.add(layerId);
       }
+      try {
+        localStorage.setItem('nerixa_active_layers', JSON.stringify(Array.from(next)));
+      } catch {}
       return next;
     });
+  };
+
+  const setAllLayers = (enable: boolean) => {
+    const next = enable ? new Set(DEFAULT_OPERATIONAL_LAYERS) : new Set<string>();
+    setActiveLayers(next);
+    try {
+      localStorage.setItem('nerixa_active_layers', JSON.stringify(Array.from(next)));
+    } catch {}
   };
 
   // ── Initialize Map & Layers ──
@@ -467,17 +624,33 @@ export default function MapView({
     // Custom Top-Left Zoom Control
     L.control.zoom({ position: 'topleft' }).addTo(map);
 
-    // Initial Tile Layer (Esri Photorealistic Satellite by default for rich aesthetics)
-    const initialConfig = MAP_MODES_CONFIG.satellite;
-    const tl = L.tileLayer(initialConfig.esriTileUrl!, {
-      maxZoom: 18,
+    // Metric Scale Control (Google Maps Standard)
+    L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
+
+    // Initial Tile Layer
+    const initialConfig = MAP_MODES_CONFIG[mapMode] || MAP_MODES_CONFIG.satellite;
+    const initialUrl = initialConfig.tileUrl || 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    const tl = L.tileLayer(initialUrl, {
+      maxZoom: initialConfig.maxZoom || 18,
+      subdomains: initialConfig.subdomains || 'abc',
       attribution: initialConfig.attribution,
     }).addTo(map);
     tileLayerRef.current = tl;
 
+    // Add initial overlay layers if hybrid
+    if (initialConfig.overlayUrls) {
+      initialConfig.overlayUrls.forEach((ov) => {
+        const ovL = L.tileLayer(ov.url, {
+          maxZoom: ov.maxZoom || 18,
+          attribution: ov.attribution,
+        }).addTo(map);
+        overlayTileLayersRef.current.push(ovL);
+      });
+    }
+
     L.control.attribution({ position: 'bottomright', prefix: 'NERIXA Google Maps & GIS Intelligence' }).addTo(map);
 
-    // Create Layer Groups for all 16 intelligence layers
+    // Create Layer Groups for all 18 operational intelligence layers
     const layerNames = [
       'roads',
       'traffic',
@@ -495,6 +668,8 @@ export default function MapView({
       'warehouses',
       'hospitals',
       'emergencyCorridors',
+      'elevation',
+      'geofences',
       'routeVisualization',
     ];
 
@@ -502,7 +677,7 @@ export default function MapView({
       layerGroupsRef.current[id] = L.layerGroup().addTo(map);
     });
 
-    // ── Map Click Handler: Location Intelligence (Requirement 11) ──
+    // ── Map Click Handler: Location & Mountain Elevation Intelligence ──
     map.on('click', (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
 
@@ -519,11 +694,45 @@ export default function MapView({
         }
       });
 
-      // Synthetic intelligence based on coordinates
-      const isMountainSector = lat > 27.0;
-      const districtName = isMountainSector ? 'West Kameng' : lat > 26.0 ? 'Nagaon' : 'Cachar';
-      const stateName = isMountainSector ? 'Arunachal Pradesh' : 'Assam';
-      const roadRisk = nearest ? (riskPredictions.get(nearest.id)?.currentRisk ?? 45) : 38;
+      // Realistic Elevation & Mountain Sector calculation based on authentic geography
+      const isHighAltitude = lat > 27.2;
+      const isMountainSector = lat > 26.8 || (lat > 25.2 && lat < 25.8 && lng < 92.5); // Arunachal or Meghalaya plateau
+      const isPlateau = lat > 25.2 && lat < 25.8 && lng < 92.5;
+
+      const elevationMeters = isHighAltitude
+        ? Math.round(2600 + (lat - 27.2) * 1800 + Math.sin(lng * 10) * 400)
+        : isPlateau
+        ? Math.round(1450 + Math.sin(lat * 8) * 450)
+        : isMountainSector
+        ? Math.round(800 + (lat - 26.8) * 1200)
+        : Math.round(55 + Math.abs(Math.sin(lat * lng)) * 95);
+
+      const slopePercent = isHighAltitude ? 16 : isMountainSector ? 14 : isPlateau ? 9 : 2;
+      const terrainType = isHighAltitude
+        ? 'High Alpine Mountain Pass'
+        : isPlateau
+        ? 'Highland Plateau Escarpment'
+        : isMountainSector
+        ? 'Rugged Mountainous Foothills'
+        : 'Alluvial River Basin';
+
+      const districtName = isHighAltitude
+        ? 'West Kameng / Tawang'
+        : isPlateau
+        ? 'East Khasi Hills (Shillong)'
+        : lat > 26.0
+        ? 'Nagaon / Kaliabor'
+        : 'Cachar / Silchar';
+
+      const stateName = isHighAltitude || (lat > 27.0 && lng > 92.0)
+        ? 'Arunachal Pradesh'
+        : isPlateau
+        ? 'Meghalaya'
+        : lat < 24.5
+        ? 'Mizoram'
+        : 'Assam';
+
+      const roadRisk = nearest ? (riskPredictions.get(nearest.id)?.currentRisk ?? 45) : isHighAltitude ? 78 : 38;
 
       const intel: LocationIntelligence = {
         lat,
@@ -533,10 +742,18 @@ export default function MapView({
         nearestRoad: nearest,
         accessibilityScore: 100 - roadRisk,
         roadRisk,
+        elevationIntel: {
+          elevationMeters,
+          slopePercent,
+          terrainType: isHighAltitude ? 'Mountainous' : isPlateau ? 'Rugged Highlands' : isMountainSector ? 'Hilly Pass' : 'Alluvial Plain',
+          classification: isHighAltitude ? 'HIGH_ALTITUDE_RIDGE' : isMountainSector ? 'MOUNTAIN_PASS' : isPlateau ? 'PLATEAU' : 'RIVER_BASIN',
+          landslideSusceptibility: isHighAltitude || roadRisk > 70 ? 'CRITICAL' : roadRisk > 40 ? 'HIGH' : 'LOW',
+          roadCondition: roadRisk > 75 ? 'REROUTE' : roadRisk > 45 ? 'OPEN WITH CAUTION' : 'CLEAR',
+        },
         weather: {
-          temperature: 24,
-          condition: isMountainSector ? 'Dense Mist & Fog' : 'Active Monsoon Showers',
-          rainfallRate: isMountainSector ? 14 : 6.2,
+          temperature: isHighAltitude ? 9 : isPlateau ? 18 : 26,
+          condition: isHighAltitude ? 'Dense Mist & Freezing Rain' : isMountainSector ? 'Active Monsoon Downpour' : 'Intermittent Showers',
+          rainfallRate: isHighAltitude ? 14 : 6.2,
           humidity: 88,
         },
         satelliteObservation: {
@@ -560,10 +777,12 @@ export default function MapView({
       };
 
       setSelectedLocationIntel(intel);
+      onSelectLocationIntel?.(intel);
+
       setStreetViewTarget({
         lat,
         lng,
-        locationName: `${districtName} Sector`,
+        locationName: `${districtName} Sector (${elevationMeters}m)`,
         roadNumber: nearest?.number,
       });
     });
@@ -587,7 +806,7 @@ export default function MapView({
     return () => clearTimeout(timer);
   }, [isSplitView]);
 
-  // ── Switch Map Mode / Base Tile Layer ──
+  // ── Switch Map Mode / Base Tile Layer & Overlays ──
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -596,18 +815,44 @@ export default function MapView({
       return;
     }
 
+    // Remove existing base tile
     if (tileLayerRef.current) {
       mapRef.current.removeLayer(tileLayerRef.current);
+      tileLayerRef.current = null;
     }
 
+    // Remove existing overlay tile layers (from hybrid)
+    overlayTileLayersRef.current.forEach((layer) => {
+      mapRef.current?.removeLayer(layer);
+    });
+    overlayTileLayersRef.current = [];
+
     const cfg = MAP_MODES_CONFIG[mapMode];
-    if (cfg?.esriTileUrl) {
-      const newTl = L.tileLayer(cfg.esriTileUrl, {
-        maxZoom: 18,
+    if (cfg?.tileUrl) {
+      const newTl = L.tileLayer(cfg.tileUrl, {
+        maxZoom: cfg.maxZoom || 18,
+        subdomains: cfg.subdomains || 'abc',
         attribution: cfg.attribution,
       }).addTo(mapRef.current);
       tileLayerRef.current = newTl;
+
+      // Add hybrid overlay layers if configured
+      if (cfg.overlayUrls) {
+        cfg.overlayUrls.forEach((ov) => {
+          if (mapRef.current) {
+            const ovLayer = L.tileLayer(ov.url, {
+              maxZoom: ov.maxZoom || 18,
+              attribution: ov.attribution,
+            }).addTo(mapRef.current);
+            overlayTileLayersRef.current.push(ovLayer);
+          }
+        });
+      }
     }
+
+    try {
+      localStorage.setItem('nerixa_map_mode', mapMode);
+    } catch {}
   }, [mapMode]);
 
   // ── Render 1: Roads & Road Risk Layer ──
@@ -639,6 +884,7 @@ export default function MapView({
       polyline.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
         setSelectedRoad(road);
+        onSelectRoad?.(road);
         setStreetViewTarget({
           lat: road.path[0].lat,
           lng: road.path[0].lng,
@@ -658,7 +904,7 @@ export default function MapView({
 
       polyline.addTo(lg);
     });
-  }, [roads, riskPredictions, activeLayers, emergencyMode]);
+  }, [roads, riskPredictions, activeLayers, emergencyMode, onSelectRoad]);
 
   // ── Render 2: Vehicles Layer (Requirement 15) ──
   useEffect(() => {
@@ -707,6 +953,7 @@ export default function MapView({
       );
 
       marker.on('click', () => {
+        onSelectVehicle?.(v);
         setStreetViewTarget({
           lat: v.currentLocation.lat,
           lng: v.currentLocation.lng,
@@ -716,7 +963,7 @@ export default function MapView({
 
       marker.addTo(lg);
     });
-  }, [vehicles, activeLayers, emergencyMode]);
+  }, [vehicles, activeLayers, emergencyMode, onSelectVehicle]);
 
   // ── Render: Google Real-Time Traffic Layer (Section 4) ──
   useEffect(() => {
@@ -1113,7 +1360,139 @@ export default function MapView({
     }
   }, [activeLayers]);
 
-  // ── Render 11: Route Visualization (Requirement 18 - Current vs Recommended Route) ──
+  // ── Render 11: Bridges Layer (Requirement 8 & 9) ──
+  useEffect(() => {
+    const lg = layerGroupsRef.current.bridges;
+    if (!lg) return;
+    lg.clearLayers();
+    if (!activeLayers.has('bridges')) return;
+
+    const bridgesList = (bridges && bridges.length > 0) ? bridges : [
+      { id: 'br-1', name: 'Bogibeel Rail-Road Bridge', roadId: 'r-15', location: { lat: 27.40, lng: 94.90 }, condition: 'GOOD', length: 4940, capacity: 70, riverName: 'Brahmaputra River', builtYear: 2018, lastInspection: '2026-08-12', risk: 18 },
+      { id: 'br-2', name: 'Bhupen Hazarika Setu (Dhola-Sadiya)', roadId: 'r-115', location: { lat: 27.79, lng: 95.66 }, condition: 'GOOD', length: 9150, capacity: 60, riverName: 'Lohit River', builtYear: 2017, lastInspection: '2026-08-20', risk: 24 },
+      { id: 'br-3', name: 'New Saraighat Bridge', roadId: 'r-27', location: { lat: 26.13, lng: 91.69 }, condition: 'FAIR', length: 1493, capacity: 55, riverName: 'Brahmaputra River', builtYear: 2017, lastInspection: '2026-07-30', risk: 38 },
+      { id: 'br-4', name: 'Kolia Bhomora Setu', roadId: 'r-715', location: { lat: 26.61, lng: 92.85 }, condition: 'FAIR', length: 3015, capacity: 50, riverName: 'Brahmaputra River', builtYear: 1987, lastInspection: '2026-08-05', risk: 42 },
+      { id: 'br-5', name: 'Jiri River Foundation Bridge', roadId: 'r-37', location: { lat: 24.58, lng: 93.30 }, condition: 'POOR', length: 280, capacity: 35, riverName: 'Jiri River', builtYear: 1994, lastInspection: '2026-09-02', risk: 78 },
+    ];
+
+    bridgesList.forEach((b: any) => {
+      const isCritical = b.risk > 65 || b.condition === 'POOR' || b.condition === 'CRITICAL';
+      const color = isCritical ? '#ef4444' : b.risk > 35 ? '#f59e0b' : '#38bdf8';
+      const marker = L.marker([b.location.lat, b.location.lng], {
+        icon: L.divIcon({
+          html: `<div style="background:#0b1329;border:2px solid ${color};border-radius:6px;padding:2px 6px;display:flex;align-items:center;gap:4px;box-shadow:0 2px 8px rgba(0,0,0,0.7);cursor:pointer;">
+            <span style="font-size:12px;">🌉</span>
+            <span style="font-size:9px;font-weight:700;color:#f8fafc;font-family:var(--font-mono)">${b.name.split(' ')[0]}</span>
+          </div>`,
+          className: '',
+          iconSize: [64, 22],
+          iconAnchor: [32, 11],
+        }),
+      });
+
+      marker.bindPopup(`
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:220px;line-height:1.4">
+          <strong style="color:${color};font-size:13px">${b.name}</strong>
+          <div style="font-size:11px;color:#cbd5e1;margin-top:4px;">
+            <div>River: <strong>${b.riverName}</strong></div>
+            <div>Length: <strong>${b.length} m</strong> • Capacity: <strong>${b.capacity} MT</strong></div>
+            <div>Condition: <span style="font-weight:700;color:${color}">${b.condition}</span></div>
+            <div>Pier Scour Risk: <strong style="color:${color}">${b.risk}/100</strong></div>
+          </div>
+        </div>
+      `);
+
+      marker.addTo(lg);
+    });
+  }, [bridges, activeLayers]);
+
+  // ── Render 12: Elevation & Mountain Passes Layer (Requirement 5, 6, 7) ──
+  useEffect(() => {
+    const lg = layerGroupsRef.current.elevation;
+    if (!lg) return;
+    lg.clearLayers();
+    if (!activeLayers.has('elevation')) return;
+
+    MOUNTAIN_PASSES.forEach((mp) => {
+      const isHighRisk = mp.elevation > 2500 || mp.status.includes('BLOCKED') || mp.status.includes('HIGH');
+      const color = isHighRisk ? '#f59e0b' : '#38bdf8';
+
+      const marker = L.marker(mp.coords, {
+        icon: L.divIcon({
+          html: `
+            <div style="background:rgba(8,14,28,0.92);border:1.5px solid ${color};border-radius:14px;padding:2px 8px;display:flex;align-items:center;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,0.7);cursor:pointer;backdrop-filter:blur(8px);">
+              <span style="font-size:11px">⛰️</span>
+              <span style="font-size:10px;font-weight:700;color:#f8fafc;font-family:var(--font-mono)">${mp.elevation}m</span>
+            </div>
+          `,
+          className: '',
+          iconSize: [68, 22],
+          iconAnchor: [34, 11],
+        }),
+      });
+
+      marker.bindPopup(`
+        <div style="font-size:12px;font-family:Inter,sans-serif;min-width:240px;line-height:1.4">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <strong style="color:#f59e0b;font-size:13px">${mp.name}</strong>
+            <span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${mp.elevation} m</span>
+          </div>
+          <div style="font-size:11px;color:#cbd5e1;margin-bottom:6px">
+            <div>State: <strong>${mp.state}</strong></div>
+            <div>Slope: <strong>${mp.slope}</strong> • Terrain: <strong>${mp.terrain}</strong></div>
+            <div>Landslide Hazard: <strong style="color:#ef4444">${mp.landslideRisk}</strong></div>
+            <div>Weather: <em>${mp.weather}</em></div>
+            <div style="margin-top:4px;padding:3px 6px;background:rgba(255,255,255,0.05);border-radius:4px;font-weight:700;color:${isHighRisk ? '#fbbf24' : '#34d399'}">
+              Status: ${mp.status}
+            </div>
+          </div>
+        </div>
+      `);
+
+      marker.addTo(lg);
+    });
+  }, [activeLayers]);
+
+  // ── Render 13: 8 NER State Geofences Layer (Requirement 9) ──
+  useEffect(() => {
+    const lg = layerGroupsRef.current.geofences;
+    if (!lg) return;
+    lg.clearLayers();
+    if (!activeLayers.has('geofences')) return;
+
+    NER_STATE_GEOFENCES.forEach((st) => {
+      const rect = L.rectangle(st.bounds as L.LatLngBoundsExpression, {
+        color: st.color,
+        weight: 1.5,
+        dashArray: '5, 5',
+        fillColor: st.color,
+        fillOpacity: 0.04,
+      });
+
+      rect.bindTooltip(
+        `<div style="font-size:11px;font-family:Inter,sans-serif;font-weight:700;color:${st.color}">
+          🏛️ State Jurisdiction: ${st.name} (Capital: ${st.capital})
+        </div>`,
+        { sticky: true }
+      );
+
+      rect.addTo(lg);
+
+      const labelMarker = L.marker(st.center, {
+        icon: L.divIcon({
+          html: `<div style="background:rgba(8,12,22,0.85);border:1px solid ${st.color}55;color:${st.color};font-size:10px;font-weight:800;padding:2px 6px;border-radius:4px;letter-spacing:0.05em;white-space:nowrap;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,0.5)">
+            ${st.name.toUpperCase()}
+          </div>`,
+          className: '',
+          iconSize: [80, 20],
+          iconAnchor: [40, 10],
+        }),
+      });
+      labelMarker.addTo(lg);
+    });
+  }, [activeLayers]);
+
+  // ── Render 14: Route Visualization (Requirement 18 - Current vs Recommended Route) ──
   useEffect(() => {
     const lg = layerGroupsRef.current.routeVisualization;
     if (!lg) return;
@@ -1168,7 +1547,7 @@ export default function MapView({
     recommendedPoly.addTo(lg);
   }, []);
 
-  // ── Search Selection Handler (Requirement 17) ──
+  // ── Search Selection Handler (Requirement 17 & 31) ──
   const handleSelectSearchResult = (item: SearchResultItem) => {
     if (mapRef.current) {
       mapRef.current.setView([item.lat, item.lng], item.zoom);
@@ -1178,9 +1557,21 @@ export default function MapView({
       lng: item.lng,
       locationName: item.title,
     });
-  };
 
-  const currentDrone = DRONE_FEEDS[activeDroneIndex];
+    if (item.category === 'VEHICLE') {
+      const v = vehicles.find((veh) => veh.id === item.id || veh.vehicleNumber === item.title.split(' ')[0]);
+      if (v) onSelectVehicle?.(v);
+    } else if (item.category === 'INCIDENT') {
+      const inc = incidents.find((i) => i.id === item.id || i.type === item.title);
+      if (inc) onSelectIncident?.(inc);
+    } else if (item.category === 'ROAD') {
+      const r = roads.find((rd) => rd.id === item.id || rd.number === item.title.split(' ')[0]);
+      if (r) {
+        setSelectedRoad(r);
+        onSelectRoad?.(r);
+      }
+    }
+  };
 
   return (
     <div
@@ -1248,11 +1639,43 @@ export default function MapView({
         {/* Leaflet / GIS Map Canvas */}
         <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
 
-        {/* ── Top-Left: Google Maps Search Box (Requirement 17) ── */}
-        <MapSearchBox onSelectLocation={handleSelectSearchResult} />
+        {/* ── Top-Left: Google Maps Search Box (Requirement 17 & 31) ── */}
+        <MapSearchBox
+          onSelectLocation={handleSelectSearchResult}
+          vehicles={vehicles}
+          incidents={incidents}
+        />
 
         {/* ── Top-Right: Map Mode Switcher & Operational Controls ── */}
         <div className={`map-top-controls-container ${emergencyMode ? 'emergency-active' : ''}`}>
+          {/* Compass Rose Button */}
+          <button
+            onClick={() => {
+              if (mapRef.current) {
+                mapRef.current.setView([NER_CENTER.lat, NER_CENTER.lng], NER_DEFAULT_ZOOM, { animate: true });
+              }
+            }}
+            style={{
+              padding: '5px 8px',
+              borderRadius: '8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              background: 'rgba(8, 12, 22, 0.92)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              color: '#38bdf8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+            }}
+            title="Interactive Compass Rose • Reset Orientation & Center to North Eastern Region"
+          >
+            <span style={{ fontSize: '12px' }}>🧭</span>
+            <span>NORTH</span>
+          </button>
+
           {/* Map Modes */}
           <div
             style={{
@@ -1305,6 +1728,148 @@ export default function MapView({
                 </button>
               );
             })}
+          </div>
+
+          {/* 17 Operational Layers Popover Button (Requirement 9) */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setLayerMenuOpen(!layerMenuOpen)}
+              style={{
+                padding: '5px 11px',
+                borderRadius: '8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.03em',
+                background: layerMenuOpen ? 'rgba(56, 189, 248, 0.25)' : 'rgba(8, 12, 22, 0.92)',
+                border: `1px solid ${layerMenuOpen ? 'rgba(56, 189, 248, 0.5)' : 'rgba(255, 255, 255, 0.12)'}`,
+                color: layerMenuOpen ? '#38bdf8' : '#cbd5e1',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(16px)',
+              }}
+              title="Toggle 17 Operational GIS Layers"
+            >
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+              <span>LAYERS</span>
+              <span style={{
+                background: 'rgba(56,189,248,0.2)',
+                color: '#38bdf8',
+                fontSize: '10px',
+                padding: '1px 5px',
+                borderRadius: '4px',
+                fontWeight: 800,
+              }}>{activeLayers.size}/17</span>
+            </button>
+
+            {/* Layer Control Dropdown Panel */}
+            {layerMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '310px',
+                  maxHeight: '460px',
+                  overflowY: 'auto',
+                  background: 'rgba(10, 16, 30, 0.96)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '10px',
+                  padding: '12px',
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.85)',
+                  backdropFilter: 'blur(20px)',
+                  zIndex: 1100,
+                  fontSize: '11px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontWeight: 800, color: '#f8fafc', fontSize: '12px', letterSpacing: '0.04em' }}>
+                    GIS LAYER CONTROL
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => setAllLayers(true)}
+                      style={{ background: 'none', border: 'none', color: '#38bdf8', fontSize: '10px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      All
+                    </button>
+                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+                    <button
+                      onClick={() => setAllLayers(false)}
+                      style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '10px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {[
+                    { id: 'vehicles', label: 'Live Vehicles (GPS)', icon: '🚚', badge: vehicles.length },
+                    { id: 'traffic', label: 'Real-Time Traffic Flow', icon: '🚦', active: trafficLayerEnabled, onToggle: () => setTrafficLayerEnabled(!trafficLayerEnabled) },
+                    { id: 'roads', label: 'Roads & Highways', icon: '🛣️', badge: roads.length },
+                    { id: 'roadRisk', label: 'Road Risk Classification', icon: '⚠️' },
+                    { id: 'incidents', label: 'Incidents (Landslides/Floods)', icon: '🚨', badge: incidents.length },
+                    { id: 'floodZones', label: 'Flood Inundation Perimeters', icon: '🌊' },
+                    { id: 'landslideZones', label: 'Landslide Susceptibility Zones', icon: '🏔️' },
+                    { id: 'weather', label: 'Live Rain & Weather Radar', icon: '🌧️', badge: liveWeatherReports.length },
+                    { id: 'satelliteAI', label: 'Copernicus Sentinel-1/2 AI', icon: '🛰️', badge: satelliteObservations.length },
+                    { id: 'fieldReports', label: 'Field Evidence Photographs', icon: '📷', badge: imageIntelList.length },
+                    { id: 'hospitals', label: 'Hospitals & Trauma Centers', icon: '🏥', badge: hospitals.length },
+                    { id: 'warehouses', label: 'Warehouses & Stockpiles', icon: '🏭', badge: warehouses.length },
+                    { id: 'shipments', label: 'Critical Supply Transports', icon: '📦', badge: shipments.length },
+                    { id: 'emergencyCorridors', label: 'Emergency Green Corridors', icon: '🛡️' },
+                    { id: 'bridges', label: 'Structural Bridges & Scour', icon: '🌉' },
+                    { id: 'elevation', label: 'Elevation & Mountain Passes', icon: '⛰️', badge: MOUNTAIN_PASSES.length },
+                    { id: 'geofences', label: '8 NER State Geofences', icon: '🗺️', badge: 8 },
+                  ].map((layer) => {
+                    const isChecked = layer.id === 'traffic' ? trafficLayerEnabled : activeLayers.has(layer.id);
+                    return (
+                      <label
+                        key={layer.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          background: isChecked ? 'rgba(56, 189, 248, 0.08)' : 'transparent',
+                          cursor: 'pointer',
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (layer.onToggle) layer.onToggle();
+                              else toggleLayer(layer.id);
+                            }}
+                            style={{ accentColor: '#0284c7', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '12px' }}>{layer.icon}</span>
+                          <span style={{ color: isChecked ? '#f8fafc' : '#94a3b8', fontWeight: isChecked ? 600 : 400 }}>
+                            {layer.label}
+                          </span>
+                        </div>
+                        {layer.badge !== undefined && (
+                          <span style={{ fontSize: '9px', fontWeight: 700, fontFamily: 'monospace', color: '#38bdf8', background: 'rgba(56, 189, 248, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>
+                            {layer.badge}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Section 4: Google Real-Time Traffic Layer Toggle */}
@@ -1410,6 +1975,148 @@ export default function MapView({
             <GearIcon size={13} color="#cbd5e1" />
             <span>Admin</span>
           </button>
+        </div>
+
+        {/* ── Dynamic Map Legend (Requirement 30: Only show items for enabled layers) ── */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '72px',
+            right: '14px',
+            zIndex: 900,
+            background: 'rgba(8, 12, 22, 0.94)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '10px',
+            padding: legendOpen ? '10px 14px' : '6px 10px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(16px)',
+            maxWidth: '280px',
+            fontSize: '11px',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <div
+            onClick={() => setLegendOpen(!legendOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              gap: '12px',
+              color: '#cbd5e1',
+              fontWeight: 700,
+              fontSize: '11px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8' }} />
+              <span>DYNAMIC MAP LEGEND</span>
+            </div>
+            <span style={{ fontSize: '10px', color: '#94a3b8' }}>{legendOpen ? '▲' : '▼'}</span>
+          </div>
+
+          {legendOpen && (
+            <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '6px' }}>
+              {activeLayers.has('vehicles') && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                    <span>Moving Vehicle (Live GPS)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
+                    <span>Idle / Stopped Vehicle</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                    <span>Emergency Vehicle</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#6b7280' }} />
+                    <span>Offline (Last Known Location)</span>
+                  </div>
+                </>
+              )}
+              {(activeLayers.has('roads') || activeLayers.has('roadRisk')) && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '12px', height: '3px', background: '#f97316', borderRadius: '2px' }} />
+                    <span>High-Risk Road Section</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                    <span style={{ width: '12px', height: '3px', background: '#dc2626', borderRadius: '2px' }} />
+                    <span>Blocked Highway</span>
+                  </div>
+                </>
+              )}
+              {(activeLayers.has('incidents') || activeLayers.has('landslideZones')) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🔺</span>
+                  <span>Landslide Hazard / Debris</span>
+                </div>
+              )}
+              {(activeLayers.has('floodZones') || activeLayers.has('incidents')) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🌊</span>
+                  <span>Flood Inundation Corridor</span>
+                </div>
+              )}
+              {activeLayers.has('weather') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🌧️</span>
+                  <span>Monsoon Telemetry Station</span>
+                </div>
+              )}
+              {activeLayers.has('fieldReports') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>📷</span>
+                  <span>Field Officer Ground Photo</span>
+                </div>
+              )}
+              {activeLayers.has('satelliteAI') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🛰️</span>
+                  <span>Copernicus SAR Detection</span>
+                </div>
+              )}
+              {activeLayers.has('hospitals') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🏥</span>
+                  <span>Hospital & Trauma Center</span>
+                </div>
+              )}
+              {activeLayers.has('warehouses') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🏭</span>
+                  <span>Supply Warehouse Stockpile</span>
+                </div>
+              )}
+              {activeLayers.has('shipments') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>📦</span>
+                  <span>Critical Medical/Food Cargo</span>
+                </div>
+              )}
+              {activeLayers.has('bridges') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🌉</span>
+                  <span>Structural Bridge / Pier Scour</span>
+                </div>
+              )}
+              {activeLayers.has('elevation') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>⛰️</span>
+                  <span>Mountain Pass / High Peak</span>
+                </div>
+              )}
+              {activeLayers.has('geofences') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#cbd5e1' }}>
+                  <span>🏛️</span>
+                  <span>State Boundary Geofence</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Floating Fleet Metrics Overlay ── */}

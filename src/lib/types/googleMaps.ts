@@ -4,11 +4,11 @@
 // 15 intelligence layers, visual history, and multi-source verification
 // ============================================================
 
-import type { Road, Vehicle, Incident, Shipment, Hospital, Warehouse, Bridge } from './index';
+import type { Road } from './index';
 
 export type MapEngine = 'google' | 'leaflet';
 
-export type MapMode = 'roadmap' | 'satellite' | 'hybrid' | 'terrain' | 'streetview';
+export type MapMode = 'roadmap' | 'satellite' | 'hybrid' | 'terrain' | 'dark' | 'nerixa_intel' | 'streetview';
 
 export interface StreetViewMetadata {
   available: boolean;
@@ -22,6 +22,52 @@ export interface StreetViewMetadata {
   isRealData: boolean;
 }
 
+export interface ElevationIntelligence {
+  elevationMeters: number;
+  slopePercent: number;
+  terrainType: 'Mountainous' | 'Rugged Highlands' | 'River Valley' | 'Hilly Pass' | 'Alluvial Plain';
+  classification: 'HIGH_ALTITUDE_RIDGE' | 'MOUNTAIN_PASS' | 'VALLEY_FLOOR' | 'RIVER_BASIN' | 'PLATEAU';
+  landslideSusceptibility: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+  roadCondition: string;
+}
+
+export interface MountainRoadIntelligence {
+  roadId: string;
+  roadName: string;
+  roadNumber: string;
+  elevationMeters: number;
+  slopePercent: number;
+  terrainType: string;
+  roadCondition: string;
+  weather: {
+    condition: string;
+    temperature: number;
+    rainfallRate: number;
+    windSpeed: number;
+  };
+  trafficLevel: string;
+  floodRisk: number; // 0-100
+  landslideRisk: number; // 0-100
+  bridgeCondition: string;
+  nearbyIncidentsCount: number;
+  vehiclesApproachingCount: number;
+  criticalShipmentsCount: number;
+  latestFieldReport?: {
+    timeAgo: string;
+    incidentType: string;
+    severity: number;
+    imageUrl?: string;
+  };
+  satelliteEvidence?: {
+    satellite: string;
+    acquisitionTime: string;
+    finding: string;
+    confidence: number;
+  };
+  aiRecommendation: 'PROCEED_NORMAL' | 'PROCEED_WITH_CAUTION' | 'RESTRICT_HEAVY_CONVOYS' | 'REROUTE';
+  recommendationReason: string;
+}
+
 export interface LocationIntelligence {
   lat: number;
   lng: number;
@@ -30,6 +76,7 @@ export interface LocationIntelligence {
   nearestRoad?: Road;
   accessibilityScore: number; // 0-100%
   roadRisk: number; // 0-100
+  elevationIntel?: ElevationIntelligence;
   weather: {
     temperature: number;
     condition: string;
@@ -134,6 +181,7 @@ export interface AdminMapConfig {
   emergencyModeActive: boolean;
   enabledLayers: {
     roads: boolean;
+    traffic: boolean;
     roadRisk: boolean;
     bridges: boolean;
     vehicles: boolean;
@@ -148,6 +196,8 @@ export interface AdminMapConfig {
     warehouses: boolean;
     hospitals: boolean;
     emergencyCorridors: boolean;
+    elevation: boolean;
+    geofences: boolean;
   };
 }
 
@@ -155,7 +205,7 @@ export interface SearchResultItem {
   id: string;
   title: string;
   subtitle: string;
-  category: 'DISTRICT' | 'CITY' | 'ROAD' | 'HOSPITAL' | 'WAREHOUSE' | 'INCIDENT' | 'COORDINATES';
+  category: 'DISTRICT' | 'CITY' | 'ROAD' | 'HOSPITAL' | 'WAREHOUSE' | 'INCIDENT' | 'COORDINATES' | 'VEHICLE' | 'PASS' | 'AIRPORT' | 'RAILWAY' | 'STATE';
   lat: number;
   lng: number;
   zoom: number;

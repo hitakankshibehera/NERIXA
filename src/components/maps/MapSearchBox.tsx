@@ -17,13 +17,19 @@ import {
   PinIcon,
   MapIcon,
   CloseIcon,
+  TruckIcon,
+  HazardIcon,
+  TerrainIcon,
 } from '@/components/common/Icons';
+import type { Vehicle, Incident } from '@/lib/types';
 
 interface MapSearchBoxProps {
   onSelectLocation: (result: SearchResultItem) => void;
+  vehicles?: Vehicle[];
+  incidents?: Incident[];
 }
 
-export default function MapSearchBox({ onSelectLocation }: MapSearchBoxProps) {
+export default function MapSearchBox({ onSelectLocation, vehicles, incidents }: MapSearchBoxProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -31,14 +37,17 @@ export default function MapSearchBox({ onSelectLocation }: MapSearchBoxProps) {
 
   useEffect(() => {
     if (query.trim().length > 1) {
-      const hits = searchNERLocations(query);
+      const hits = searchNERLocations(query, {
+        vehicles: vehicles?.map(v => ({ id: v.id, vehicleNumber: v.vehicleNumber, driverName: v.driverName, currentLocation: v.currentLocation, status: v.status })),
+        incidents: incidents?.map(i => ({ id: i.id, type: i.type, roadName: i.roadName, location: i.location, severity: i.severity })),
+      });
       setResults(hits);
       setIsOpen(hits.length > 0);
     } else {
       setResults([]);
       setIsOpen(false);
     }
-  }, [query]);
+  }, [query, vehicles, incidents]);
 
   // Click outside listener to close dropdown
   useEffect(() => {
@@ -59,6 +68,32 @@ export default function MapSearchBox({ onSelectLocation }: MapSearchBoxProps) {
 
   const renderCategoryIcon = (cat: SearchResultItem['category']) => {
     switch (cat) {
+      case 'VEHICLE':
+        return (
+          <div style={{ width: '24px', height: '24px', borderRadius: '5px', background: 'rgba(34, 197, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <TruckIcon size={13} color="#22c55e" />
+          </div>
+        );
+      case 'INCIDENT':
+        return (
+          <div style={{ width: '24px', height: '24px', borderRadius: '5px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <HazardIcon size={13} color="#ef4444" />
+          </div>
+        );
+      case 'PASS':
+        return (
+          <div style={{ width: '24px', height: '24px', borderRadius: '5px', background: 'rgba(245, 158, 11, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <TerrainIcon size={13} color="#f59e0b" />
+          </div>
+        );
+      case 'AIRPORT':
+      case 'RAILWAY':
+        return (
+          <div style={{ width: '24px', height: '24px', borderRadius: '5px', background: 'rgba(6, 182, 212, 0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <PinIcon size={13} color="#06b6d4" />
+          </div>
+        );
+      case 'STATE':
       case 'CITY':
       case 'DISTRICT':
         return (

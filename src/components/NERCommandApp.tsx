@@ -9,7 +9,7 @@ import { useApp } from '@/lib/store/AppContext';
 import { t } from '@/lib/i18n/translations';
 import { getRiskLevel, getRiskColor, RISK_LEVELS, ALERT_COLORS, COMMODITY_CONFIG, VEHICLE_STATUS_COLORS, NER_STATES, MAP_LAYERS } from '@/lib/constants';
 import { processCommanderQuery } from '@/lib/ai/commander';
-import type { Road, RouteRequest, SimulationScenario, Incident, Alert, RiskPrediction, RouteOption, SimulationResult, CommanderResponse, IncidentType, UserRole } from '@/lib/types';
+import type { Road, Vehicle, Shipment, RouteRequest, SimulationScenario, Incident, Alert, RiskPrediction, RouteOption, SimulationResult, CommanderResponse, IncidentType, UserRole } from '@/lib/types';
 import dynamic from 'next/dynamic';
 import WeatherTelemetryModal from '@/components/WeatherTelemetryModal';
 import ImageIntelligenceHub from '@/components/ImageIntelligenceHub';
@@ -19,6 +19,8 @@ import { DataSourcesPanel } from '@/components/fleet/DataSourcesPanel';
 import { LiveEventTimeline } from '@/components/fleet/LiveEventTimeline';
 import { FieldEvidenceModal } from '@/components/fleet/FieldEvidenceModal';
 import { calculateFreshness } from '@/lib/fleet/telemetryValidator';
+import LiveSurveillanceDock from '@/components/maps/LiveSurveillanceDock';
+import type { LocationIntelligence } from '@/lib/types/googleMaps';
 import {
   ShieldIcon,
   DashboardIcon,
@@ -1413,11 +1415,19 @@ function DashboardPage({
     operationalMode,
     setOperationalMode,
     triggerSihDemoFlow,
+    liveEvents,
   } = useApp();
 
   const [activeMode, setActiveMode] = useState<'NORMAL' | 'DISASTER' | 'HIGH_ALERT'>('DISASTER');
   const [realityModalOpen, setRealityModalOpen] = useState(false);
   const [realityFeedIndex, setRealityFeedIndex] = useState(0);
+
+  // Selected Entities for Real-Time Surveillance Dock
+  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedLocationIntel, setSelectedLocationIntel] = useState<LocationIntelligence | null>(null);
+  const [dockCollapsed, setDockCollapsed] = useState(false);
 
   const activeAlerts = alerts.filter(a => a.status === 'ACTIVE').sort((a, b) => {
     const levels = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, INFO: 4 };
@@ -1630,42 +1640,198 @@ function DashboardPage({
         </div>
       )}
 
-      {/* Main Layout: Map + Alerts */}
-      <div className="dashboard-grid">
-        <div className="dashboard-map">
+      {/* ── REALISTIC COMMAND CENTER 3-PANE LAYOUT (Requirement 34) ── */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: dockCollapsed ? '1fr 44px' : '1fr 380px',
+          gap: '12px',
+          height: 'calc(100vh - var(--header-height) - 175px)',
+          minHeight: '520px',
+          transition: 'grid-template-columns 0.25s ease',
+        }}
+      >
+        {/* CENTER: LARGE DOMINANT GIS COMMAND MAP */}
+        <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative', height: '100%' }}>
           <MapView
             onOpenRealityRecon={(camIdx) => {
               setRealityFeedIndex(camIdx ?? 0);
               setRealityModalOpen(true);
             }}
-            onSelectIncident={() => {
-              setRealityFeedIndex(0);
-              setRealityModalOpen(true);
+            onSelectIncident={(inc) => {
+              setSelectedIncident(inc);
+              setSelectedVehicle(null);
+              setSelectedRoad(null);
+            }}
+            onSelectVehicle={(v) => {
+              setSelectedVehicle(v);
+              setSelectedRoad(null);
+              setSelectedIncident(null);
+            }}
+            onSelectRoad={(r) => {
+              setSelectedRoad(r);
+              setSelectedVehicle(null);
+              setSelectedIncident(null);
+            }}
+            onSelectLocationIntel={(intel) => {
+              setSelectedLocationIntel(intel);
             }}
             onOpenWeatherModal={onOpenWeatherModal}
             onOpenImageIntel={() => onNavigate('image-intel')}
             onOpenSatelliteIntel={() => onNavigate('satellite-intel')}
           />
         </div>
-        <div className="dashboard-alerts">
-          <div className="card-header">
-            <span className="card-title">{t('dashboard.live_alerts', language)}</span>
-            <button className="btn btn-ghost btn-sm" style={{ fontSize: '0.6875rem' }} onClick={() => onNavigate('alerts')}>View All</button>
-          </div>
-          {activeAlerts.slice(0, 8).map(alert => (
-            <AlertCard
-              key={alert.id}
-              alert={alert}
-              compact
-              onInspectReality={() => {
-                setRealityFeedIndex(alert.id === 'al-2' ? 1 : 0);
-                setRealityModalOpen(true);
+
+        {/* RIGHT: LIVE SURVEILLANCE & AI COMMANDER DOCK */}
+        <div style={{ height: '100%', overflow: 'hidden' }}>
+          <LiveSurveillanceDock
+            selectedVehicle={selectedVehicle}
+            selectedRoad={selectedRoad}
+            selectedIncident={selectedIncident}
+            selectedLocationIntel={selectedLocationIntel}
+            operationalMode={operationalMode}
+            roads={roads}
+            vehicles={vehicles}
+            shipments={shipments}
+            incidents={incidents}
+            predictions={riskPredictions}
+            alerts={alerts}
+            onCloseSelection={() => {
+              setSelectedVehicle(null);
+              setSelectedRoad(null);
+              setSelectedIncident(null);
+              setSelectedLocationIntel(null);
+            }}
+            onAuthorizeReroute={approveReroute}
+            onOpenSatelliteHub={() => onNavigate('satellite-intel')}
+            onOpenFieldHub={() => {
+              if (onOpenFieldEvidence) onOpenFieldEvidence();
+              else onNavigate('image-intel');
+            }}
+            isCollapsed={dockCollapsed}
+            onToggleCollapse={() => setDockCollapsed(!dockCollapsed)}
+          />
+        </div>
+      </div>
+
+      {/* ── BOTTOM: OPERATIONS STATUS BAR & LIVE EVENTS CASCADE (Requirement 27, 28, 34) ── */}
+      <div
+        style={{
+          marginTop: '10px',
+          background: 'rgba(8, 12, 22, 0.94)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          fontSize: '11px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Real Data vs Demo Simulation Status (Req 28) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                background: operationalMode === 'LIVE_DATA' ? '#10b981' : '#f59e0b',
+                boxShadow: operationalMode === 'LIVE_DATA' ? '0 0 8px #10b981' : '0 0 6px #f59e0b',
               }}
             />
-          ))}
-          {activeAlerts.length === 0 && (
-            <p className="text-sm text-muted" style={{ padding: '1rem', textAlign: 'center' }}>No active alerts</p>
+            <span style={{ fontWeight: 800, color: operationalMode === 'LIVE_DATA' ? '#10b981' : '#f59e0b', letterSpacing: '0.04em' }}>
+              {operationalMode === 'LIVE_DATA' ? '● LIVE HARDWARE DATA' : '● DEMO SIMULATION'}
+            </span>
+          </div>
+
+          <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+
+          {/* Data Sources Health Status (Req 27) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#94a3b8' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+              <span>GPS Fleet</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+              <span>Google Traffic</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+              <span>Sentinel-1 SAR</span>
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#10b981' }} />
+              <span>Weather</span>
+            </span>
+            <span
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#f87171' }}
+              title="Requirement 16: No official GTFS-RT feed in mountain sector"
+            >
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444' }} />
+              <span>Public Transit: LIVE TRANSIT DATA UNAVAILABLE</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Live Event Headline & Shortcuts */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {liveEvents.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#cbd5e1',
+                background: 'rgba(255,255,255,0.03)',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                border: '1px solid rgba(255,255,255,0.06)',
+                maxWidth: '400px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <span style={{ color: '#c084fc', fontWeight: 700, fontFamily: 'monospace' }}>
+                {liveEvents[0].timestamp}
+              </span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {liveEvents[0].title}
+              </span>
+            </div>
           )}
+
+          {onOpenTimeline && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={onOpenTimeline}
+              style={{ fontSize: '10px', color: '#c084fc', padding: '2px 8px', fontWeight: 700 }}
+            >
+              View Full Timeline →
+            </button>
+          )}
+
+          <button
+            className="btn btn-sm"
+            onClick={() => triggerSihDemoFlow()}
+            style={{
+              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+              color: '#000',
+              fontWeight: 800,
+              border: 'none',
+              padding: '3px 10px',
+              borderRadius: '5px',
+              fontSize: '10px',
+              letterSpacing: '0.04em',
+            }}
+          >
+            ▶ SIH 15-STAGE DEMO
+          </button>
         </div>
       </div>
 

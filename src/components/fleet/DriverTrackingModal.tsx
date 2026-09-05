@@ -379,7 +379,7 @@ export const DriverTrackingModal: React.FC<DriverTrackingProps> = ({
                 className={`text-xs font-mono font-semibold mt-1.5 block ${
                   freshness.category === 'LIVE'
                     ? 'text-emerald-400'
-                    : freshness.category === 'UPDATED'
+                    : freshness.category === 'RECENT'
                     ? 'text-blue-400'
                     : 'text-neutral-400'
                 }`}

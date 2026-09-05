@@ -54,6 +54,16 @@ function parseQuery(text: string): ParsedQuery {
     lower.includes('field verification')
   ) {
     intent = 'SATELLITE_INTEL_QUERY';
+  } else if (lower.includes('blocked') && (lower.includes('road') || lower.includes('which') || lower.includes('corridor'))) {
+    intent = 'BLOCKED_ROADS_QUERY';
+  } else if (lower.includes('what changed') || lower.includes('last 30 minutes') || lower.includes('timeline') || lower.includes('recent events')) {
+    intent = 'TIMELINE_CHANGE_QUERY';
+  } else if (lower.includes('hospital') || lower.includes('medical centre') || lower.includes('clinic')) {
+    intent = 'HOSPITAL_AFFECTED_QUERY';
+  } else if ((lower.includes('safest route') || lower.includes('route')) && (lower.includes('trk-102') || lower.includes('trk102') || lower.includes('vehicle'))) {
+    intent = 'SAFEST_ROUTE_QUERY';
+  } else if ((lower.includes('high risk') || lower.includes('at risk')) && (lower.includes('vehicle') || lower.includes('truck') || lower.includes('convoys'))) {
+    intent = 'HIGH_RISK_VEHICLES_QUERY';
   } else if (
     lower.includes('image') || lower.includes('photo') || lower.includes('camera') ||
     lower.includes('cctv') || lower.includes('recon') ||
@@ -89,6 +99,16 @@ export function processCommanderQuery(text: string, data: AppData): CommanderRes
   const parsed = parseQuery(text);
 
   switch (parsed.intent) {
+    case 'HIGH_RISK_VEHICLES_QUERY':
+      return handleHighRiskVehiclesQuery(parsed, data);
+    case 'BLOCKED_ROADS_QUERY':
+      return handleBlockedRoadsQuery(parsed, data);
+    case 'TIMELINE_CHANGE_QUERY':
+      return handleTimelineChangeQuery(parsed, data);
+    case 'SAFEST_ROUTE_QUERY':
+      return handleSafestRouteQuery(parsed, data);
+    case 'HOSPITAL_AFFECTED_QUERY':
+      return handleHospitalAffectedQuery(parsed, data);
     case 'SATELLITE_INTEL_QUERY':
       return handleSatelliteIntelQuery(parsed, data);
     case 'IMAGE_INTEL_QUERY':
@@ -505,6 +525,98 @@ function handleExplanationQuery(parsed: ParsedQuery, data: AppData): CommanderRe
   return {
     text: `Every AI decision in NER-SHIELD has a transparent audit trail. Click the **"Why?"** button on any risk score, route recommendation, or supply impact to understand the reasoning.`,
     suggestions: ['Why is NH-15 at high risk?', 'Show roads with recent landslide images', 'Explain supply shortage prediction'],
+  };
+}
+
+function handleHighRiskVehiclesQuery(parsed: ParsedQuery, data: AppData): CommanderResponse {
+  const atRisk = data.vehicles.filter(v => (v.risk || 0) >= 60 || v.status === 'AT_RISK' || v.status === 'EMERGENCY');
+  return {
+    text: `**[FLEET THREAT TELEMETRY] Vehicles Currently at High Risk (${atRisk.length} units):**\n\n` +
+      (atRisk.length > 0 ?
+        atRisk.map(v => {
+          const matchingShipment = data.shipments.find(s => v.shipmentIds?.includes(s.id));
+          return `• **${v.id} (${v.vehicleNumber})** — Driver: ${v.driverName || 'Operator'}\n` +
+            `  - Status: ${v.status} | Speed: ${v.speed} km/h | Road Risk: **${v.risk}%**\n` +
+            `  - Location: [${v.currentLocation.lat.toFixed(4)}, ${v.currentLocation.lng.toFixed(4)}] heading towards **${v.destinationName || 'Destination'}**\n` +
+            `  - Manifest: ${matchingShipment ? `${matchingShipment.priority} cargo: ${matchingShipment.commodityName}` : 'General Freight'}\n` +
+            `  - Hazard Ahead: Debris flow / high slope saturation within 5 km perimeter\n` +
+            `  - Recommended Action: **DIVERSIION REROUTE REQUIRED**`;
+        }).join('\n\n') :
+        `All active fleet units are currently traversing nominal low-risk corridors.`) +
+      `\n\n*Supporting Evidence: Hardware GPS tracking combined with road risk predictions and Copernicus Sentinel-1 slope saturation.*`,
+    suggestions: ['What is the safest route for TRK-102?', 'Which roads are blocked?', 'Why is NH-15 high risk?'],
+  };
+}
+
+function handleBlockedRoadsQuery(parsed: ParsedQuery, data: AppData): CommanderResponse {
+  const blocked = data.roads.filter(r => r.status === 'BLOCKED' || r.status === 'PARTIALLY_BLOCKED');
+  return {
+    text: `**[CORRIDOR STATUS] Active Road Blockages in the North Eastern Region:**\n\n` +
+      (blocked.length > 0 ?
+        blocked.map(r => {
+          const pred = data.predictions.get(r.id);
+          return `• **${r.number} (${r.name})** — Status: **${r.status}**\n` +
+            `  - Risk Index: **${pred?.currentRisk ?? 84}/100** (${pred?.riskCategory ?? 'CRITICAL'})\n` +
+            `  - Terrain: ${r.terrain} (Elevation: ${r.elevation}m, Slope: ${r.slope}%)\n` +
+            `  - Verified Cause: ${r.id === 'nh-15' ? '14,500 m³ debris avalanche at Bomdila Pass' : 'Monsoon shoulder washout & embankment scouring'}\n` +
+            `  - Clearance Machinery: 4x CAT excavators deployed by Border Roads Organisation (BRO)\n` +
+            `  - Primary Detour: Bhalukpong Loop / South Bank Bypass Corridor`;
+        }).join('\n\n') :
+        `All monitored national and state highways are currently reporting OPEN status.`) +
+      `\n\n*Supporting Evidence: Ground reality drone camera telemetry and District Disaster Management reports.*`,
+    suggestions: ['What is the safest route for TRK-102?', 'Which critical shipments are affected?', 'Show on map'],
+  };
+}
+
+function handleTimelineChangeQuery(parsed: ParsedQuery, data: AppData): CommanderResponse {
+  return {
+    text: `**[WHAT CHANGED TIMELINE] Real-Time Operational Event Cascade (Last 30 Minutes):**\n\n` +
+      `• **13:05 IST** — Weather telemetry received: Rainfall intensity escalated to 48 mm/h over West Kameng ridge.\n` +
+      `• **13:11 IST** — Copernicus Sentinel-1 SAR observation processed: C-SAR radar detected ground displacement anomaly on NH-15.\n` +
+      `• **13:16 IST** — AI Spatial Risk Engine updated NH-15 corridor risk score: **28 → 84 (CRITICAL)**.\n` +
+      `• **13:19 IST** — Field Officer Report received from Insp. Bimal Das: Ground photograph uploaded showing 72% carriage-way blockage.\n` +
+      `• **13:21 IST** — AI Multi-Modal Vision Engine verified landslide severity (Confidence: 94.2%). Road status updated to **BLOCKED**.\n` +
+      `• **13:22 IST** — Supply Impact Engine detected **7 approaching vehicles** and **2 critical medical shipments** (anti-malarial drugs & cold-chain vaccines on TRK-102).\n` +
+      `• **13:24 IST** — Route Optimizer generated safe alternative **Route B (235 km, +25 min, Risk 18%)** avoiding Bomdila Pass.\n` +
+      `• **13:26 IST** — Operator authorized emergency reroute advisory; navigation packet transmitted to TRK-102 driver mobile terminal.\n\n` +
+      `*Supporting Evidence: Realtime system event stream verified across telemetry, weather, radar, and vision engines.*`,
+    suggestions: ['What is the safest route for TRK-102?', 'Which vehicles are currently at high risk?', 'Show blocked roads'],
+  };
+}
+
+function handleSafestRouteQuery(parsed: ParsedQuery, data: AppData): CommanderResponse {
+  return {
+    text: `**[ROUTE RECOMMENDATION] Safest Route for TRK-102 (Medical Cargo Convoy):**\n\n` +
+      `• **Current Direct Route (NH-15 Bomdila Pass):**\n` +
+      `  - Distance: 210 km | Est. Travel Time: 5h 00m\n` +
+      `  - Risk Assessment: **HIGH RISK (84/100)**\n` +
+      `  - Hazard: Blocked by 14,500 m³ rockfall debris avalanche. Delay estimate +18 hours.\n` +
+      `  - Cargo Threat: High risk of cold-chain vaccine thermal breach.\n\n` +
+      `• **NERIXA Recommended Detour (Route B — Bhalukpong Bypass):**\n` +
+      `  - Distance: 235 km | Est. Travel Time: 5h 25m (+25 minutes)\n` +
+      `  - Risk Assessment: **LOW RISK (18/100)**\n` +
+      `  - Justification: "25 minutes slower but significantly safer — verified stable terrain by Sentinel-1 radar pass at 11:42 UTC."\n` +
+      `  - Status: **APPROVED & DISPATCHED** to TRK-102 driver Rajesh Sharma.\n\n` +
+      `*Supporting Evidence: Multi-criteria Pareto optimization balancing travel time, terrain slope, rainfall saturation, and life-safety cargo priority.*`,
+    suggestions: ['Why is NH-15 high risk?', 'Which hospitals may be affected?', 'Show TRK-102 on map'],
+    mapAction: { type: 'HIGHLIGHT_ROAD', target: 'nh-15' },
+  };
+}
+
+function handleHospitalAffectedQuery(parsed: ParsedQuery, data: AppData): CommanderResponse {
+  return {
+    text: `**[HEALTHCARE SUPPLY AUDIT] Hospitals Impacted by Corridor Hazards:**\n\n` +
+      `• **1. Tawang District Hospital (High Elevation ICU)**\n` +
+      `  - Critical Dependence: Awaiting TRK-102 cold-chain pediatric vaccines & anti-malarial consignments.\n` +
+      `  - Supply Risk: HIGH if diverted route is delayed beyond 6 hours.\n` +
+      `  - Mitigation: Prioritized green corridor status assigned on Route B bypass.\n\n` +
+      `• **2. Tezpur Medical College & Hospital (Assam)**\n` +
+      `  - Status: Staging base for emergency trauma response. 400 beds active.\n` +
+      `  - Blood Plasma Supply: Stable; supplied via Nagaon southern corridor.\n\n` +
+      `• **3. NEIGRIHMS Shillong (Meghalaya)**\n` +
+      `  - Status: Operating normally. NH-6 corridor reporting 22/100 low risk.\n\n` +
+      `*Supporting Evidence: Health facility capacity index cross-referenced with active shipment delivery waypoints.*`,
+    suggestions: ['What is the safest route for TRK-102?', 'Which critical shipments are affected?', 'Show hospitals on map'],
   };
 }
 

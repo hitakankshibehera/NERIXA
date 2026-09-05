@@ -169,7 +169,7 @@ export interface Vehicle {
   isQueuedHistorical?: boolean;
   lastPingTimestamp?: number; // unix ms
   freshnessText?: string;
-  freshnessCategory?: 'LIVE' | 'UPDATED' | 'STALE' | 'OFFLINE';
+  freshnessCategory?: 'LIVE' | 'RECENT' | 'UPDATED' | 'STALE' | 'OFFLINE';
 }
 
 export interface Shipment {
@@ -541,6 +541,9 @@ export type SystemEventType =
   | 'reroute_approved'
   | 'reroute_sent_to_driver'
   | 'field_report_received'
+  | 'field_evidence_uploaded'
+  | 'ai_incident_verified'
+  | 'vehicles_at_risk'
   | 'satellite_observation_processed'
   | 'weather_warning_received';
 

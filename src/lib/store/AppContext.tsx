@@ -900,6 +900,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  // ── Audit ──
+  const addAuditLogInternal = (action: string, module: string, oldValue?: string, newValue?: string) => {
+    const log: AuditLog = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+      userId: user?.id ?? 'system',
+      userName: user?.name ?? 'System',
+      action,
+      module,
+      timestamp: new Date().toISOString(),
+      oldValue,
+      newValue,
+    };
+    setAuditLogs(prev => [log, ...prev]);
+  };
+
+  const addAuditLog = useCallback((action: string, module: string, oldValue?: string, newValue?: string) => {
+    addAuditLogInternal(action, module, oldValue, newValue);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // ── Risk ──
   const explainRiskForRoad = useCallback((roadId: string) => {
     const pred = riskPredictions.get(roadId);
@@ -1188,26 +1208,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((lang: string) => {
     setLanguageState(lang);
   }, []);
-
-  // ── Audit ──
-  const addAuditLogInternal = (action: string, module: string, oldValue?: string, newValue?: string) => {
-    const log: AuditLog = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-      userId: user?.id ?? 'system',
-      userName: user?.name ?? 'System',
-      action,
-      module,
-      timestamp: new Date().toISOString(),
-      oldValue,
-      newValue,
-    };
-    setAuditLogs(prev => [log, ...prev]);
-  };
-
-  const addAuditLog = useCallback((action: string, module: string, oldValue?: string, newValue?: string) => {
-    addAuditLogInternal(action, module, oldValue, newValue);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
   // ── Image Intelligence Actions ──
   const submitFieldOfficerReport = useCallback(async (reportData: Omit<FieldOfficerReport, 'id' | 'timestamp' | 'offlineSyncStatus'>) => {
@@ -1841,29 +1841,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return rec;
   }, [vehicles, roads]);
 
-  const approveReroute = useCallback(async (recId: string) => {
+  const approveReroute = useCallback(async (recId?: string) => {
     if (!activeReroute) return;
+    const targetId = recId || activeReroute.id;
     const updated: RerouteRecommendation = {
       ...activeReroute,
       status: 'APPROVED',
     };
     setActiveReroute(updated);
     await publishRerouteDecision(updated);
+
+    // Update vehicle to follow recommended route
+    setVehicles((prev) =>
+      prev.map((v) =>
+        v.id === activeReroute.vehicleId
+          ? {
+              ...v,
+              currentLocation: { lat: 26.4800, lng: 92.1800 },
+              destinationName: `${v.destinationName || 'Destination'} (via Safe Bypass)`,
+              risk: 18,
+              heading: 65,
+              status: 'MOVING',
+            }
+          : v
+      )
+    );
+
     await publishSystemEvent({
-      id: `evt-appr-${Date.now()}`,
+      id: `reroute-approved-${Date.now()}`,
       type: 'reroute_approved',
       timestamp: new Date().toLocaleTimeString('en-IN', { hour12: false }),
       timestampMs: Date.now(),
-      title: `Reroute approved for ${activeReroute.vehicleId}`,
-      description: `Dispatched ${activeReroute.recommendedRoute.name}. Diverting priority cargo around high-risk hazard.`,
+      title: `Reroute Authorized for ${activeReroute.vehicleId} (${targetId})`,
+      description: `Operator authorized safe bypass: ${activeReroute.recommendedRoute.name}. Life-safety assurance verified.`,
       entityId: activeReroute.vehicleId,
       severity: 'INFO',
       source: 'LIVE',
     });
   }, [activeReroute]);
 
-  const rejectReroute = useCallback(async (recId: string) => {
+  const rejectReroute = useCallback(async (recId?: string) => {
     if (!activeReroute) return;
+    const targetId = recId || activeReroute.id;
+    await publishSystemEvent({
+      id: `reroute-rejected-${Date.now()}`,
+      type: 'reroute_required',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour12: false }),
+      timestampMs: Date.now(),
+      title: `Reroute Dismissed for ${activeReroute.vehicleId} (${targetId})`,
+      description: 'Operator dismissed the proposed diversion. Vehicle will continue on designated path with caution.',
+      entityId: activeReroute.vehicleId,
+      severity: 'WARNING',
+      source: 'LIVE',
+    });
     setActiveReroute(null);
   }, [activeReroute]);
 
@@ -1881,72 +1911,147 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  // Complete 13-step demonstrable scenario (Section 23 SIH Demonstration)
+  // Complete 15-stage demonstrable scenario (Section 35 SIH Demonstration)
   const triggerSihDemoFlow = useCallback(async () => {
     const t = (ms: number) => new Promise((res) => setTimeout(res, ms));
     const nowTime = () => new Date().toLocaleTimeString('en-IN', { hour12: false });
 
-    // Step 1 & 2: TRK-102 GPS appears
+    // Step 1: TRK-102 travelling normally
+    setDemoState(prev => ({ ...prev, isRunning: true, currentStep: 1, totalSteps: 15 }));
     await publishSystemEvent({
       id: `sih-step-1-${Date.now()}`,
       type: 'vehicle_location_updated',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'TRK-102: Driver starts tracking',
-      description: 'Physical phone hardware GPS initialized. Realtime sync active: [26.1445, 91.7362] accuracy ±6m.',
+      title: 'STAGE 1: TRK-102 travelling normally',
+      description: 'Vehicle TRK-102 carrying critical medical supplies en route from Guwahati to Tawang along NH-15.',
       entityId: 'TRK-102',
       severity: 'INFO',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 3 & 4: Vehicle moves & traffic conditions active
+    // Step 2: Real GPS appears on the map
+    setDemoState(prev => ({ ...prev, currentStep: 2 }));
     setVehicles((prev) =>
       prev.map((v) =>
         v.id === 'TRK-102'
           ? {
               ...v,
-              currentLocation: { lat: 26.3200, lng: 91.9500 },
-              speed: 48,
-              heading: 55,
+              currentLocation: { lat: 26.1445, lng: 91.7362 },
+              speed: 42,
+              heading: 45,
               status: 'MOVING',
               lastPingTimestamp: Date.now(),
-              freshnessText: 'LIVE — just now',
+              freshnessText: 'LIVE — 4 sec ago',
               freshnessCategory: 'LIVE',
             }
           : v
       )
     );
-    setTrafficLayerEnabled(true);
+    await publishSystemEvent({
+      id: `sih-step-2-${Date.now()}`,
+      type: 'vehicle_location_updated',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 2: Real GPS appears on GIS Map',
+      description: 'Driver mobile hardware GPS synchronized. Fix: [26.1445°N, 91.7362°E], accuracy ±6m.',
+      entityId: 'TRK-102',
+      severity: 'INFO',
+      source: 'LIVE',
+    });
     await t(1000);
 
-    // Step 5: Weather warning received
+    // Step 3: Traffic data updates
+    setDemoState(prev => ({ ...prev, currentStep: 3 }));
+    setTrafficLayerEnabled(true);
     await publishSystemEvent({
-      id: `sih-step-5-${Date.now()}`,
+      id: `sih-step-3-${Date.now()}`,
+      type: 'vehicle_location_updated',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 3: Real-time Traffic Layer sync',
+      description: 'Google Traffic condition updated on arterial corridors. Traffic slowdown detected ahead.',
+      severity: 'INFO',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 4: Weather risk increases
+    setDemoState(prev => ({ ...prev, currentStep: 4 }));
+    await publishSystemEvent({
+      id: `sih-step-4-${Date.now()}`,
       type: 'weather_warning_received',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Rainfall warning received (48mm/h)',
-      description: 'Severe convective cloudburst detected over West Kameng ridge. Slope saturation index > 85%.',
+      title: 'STAGE 4: Heavy monsoon rainfall warning received (48mm/h)',
+      description: 'Severe cloudburst over West Kameng ridge. Slope water saturation index escalated beyond 85%.',
       severity: 'WARNING',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 6: Satellite / field evidence indicates hazard
+    // Step 5: Satellite observation detects surface change
+    setDemoState(prev => ({ ...prev, currentStep: 5 }));
     await publishSystemEvent({
-      id: `sih-step-6-${Date.now()}`,
+      id: `sih-step-5-${Date.now()}`,
       type: 'satellite_observation_processed',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Sentinel-1 observation processed',
-      description: 'C-SAR interferometric coherence loss indicates rapid downslope soil displacement at Bomdila.',
+      title: 'STAGE 5: Copernicus Sentinel-1 SAR change detected',
+      description: 'Interferometric radar pass detected downslope talus creep & surface deformation at Bomdila Pass.',
       severity: 'WARNING',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 7: AI increases road risk on NH-15
+    // Step 6: AI increases road risk
+    setDemoState(prev => ({ ...prev, currentStep: 6 }));
+    await publishSystemEvent({
+      id: `sih-step-6-${Date.now()}`,
+      type: 'risk_changed',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 6: AI Spatial Engine increases NH-15 risk: 28 → 84',
+      description: 'Multi-criteria model weights rainfall + radar displacement: NH-15 elevated to HIGH RISK.',
+      entityId: 'nh-15',
+      severity: 'CRITICAL',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 7: Field officer uploads ground photograph
+    setDemoState(prev => ({ ...prev, currentStep: 7 }));
+    await publishSystemEvent({
+      id: `sih-step-7-${Date.now()}`,
+      type: 'field_evidence_uploaded',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 7: Field Officer uploads ground photograph',
+      description: 'Officer Bimal Das (Field Unit 04) uploaded geo-tagged photograph at [27.2645°N, 92.4231°E].',
+      entityId: 'nh-15',
+      severity: 'CRITICAL',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 8: AI verifies the incident
+    setDemoState(prev => ({ ...prev, currentStep: 8 }));
+    await publishSystemEvent({
+      id: `sih-step-8-${Date.now()}`,
+      type: 'ai_incident_verified',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 8: AI Computer Vision Engine verifies landslide',
+      description: 'Vision model confirms 14,500 m³ rockfall avalanche with 94.2% confidence. Blockage: 72%.',
+      entityId: 'nh-15',
+      severity: 'CRITICAL',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 9: Road becomes HIGH RISK / BLOCKED
+    setDemoState(prev => ({ ...prev, currentStep: 9 }));
     setRoads((prev) =>
       prev.map((r) =>
         r.id === 'nh-15'
@@ -1975,19 +2080,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       )
     );
     await publishSystemEvent({
-      id: `sih-step-7-${Date.now()}`,
-      type: 'risk_changed',
+      id: `sih-step-9-${Date.now()}`,
+      type: 'road_blocked',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Road risk increased: NH-15 (Bomdila Pass)',
-      description: 'AI spatial risk engine updated score: 28 → 84 (CRITICAL). Traffic halted at checkpost.',
+      title: 'STAGE 9: NH-15 corridor status updated to BLOCKED',
+      description: 'Physical road closure verified. Checkpost alerts broadcasted to state emergency centers.',
       entityId: 'nh-15',
       severity: 'CRITICAL',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 8: NERIXA identifies 7 vehicles & critical shipments affected
+    // Step 10: NERIXA identifies affected vehicles
+    setDemoState(prev => ({ ...prev, currentStep: 10 }));
     setVehicles((prev) =>
       prev.map((v) =>
         ['TRK-102', 'v-1', 'v-4', 'v-7', 'v-12'].includes(v.id)
@@ -2000,53 +2106,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       )
     );
     await publishSystemEvent({
-      id: `sih-step-8-${Date.now()}`,
-      type: 'shipment_at_risk',
+      id: `sih-step-10-${Date.now()}`,
+      type: 'vehicles_at_risk',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: '7 vehicles & critical shipments affected',
-      description: 'TRK-102 carrying anti-malarial drugs and emergency vaccines is approaching hazard sector.',
+      title: 'STAGE 10: NERIXA identifies 7 approaching vehicles',
+      description: 'Spatial proximity analysis identifies 7 fleet units in the hazard catchment area.',
       entityId: 'TRK-102',
       severity: 'CRITICAL',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 9: Route engine calculates safer alternative (Route B)
+    // Step 11: NERIXA identifies critical medical shipment
+    setDemoState(prev => ({ ...prev, currentStep: 11 }));
+    await publishSystemEvent({
+      id: `sih-step-11-${Date.now()}`,
+      type: 'shipment_at_risk',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 11: Critical Medical Cargo identified on TRK-102',
+      description: 'High-priority cargo: Cold-chain pediatric vaccines & anti-malarial consignments for Tawang ICU.',
+      entityId: 'TRK-102',
+      severity: 'CRITICAL',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 12: NERIXA calculates alternative routes
+    setDemoState(prev => ({ ...prev, currentStep: 12 }));
     const targetVehicle = vehicles.find((v) => v.id === 'TRK-102') || vehicles[0];
     const rec = generateRiskAwareRerouteTradeoff(targetVehicle, roads);
     setActiveReroute(rec);
     await publishSystemEvent({
-      id: `sih-step-9-${Date.now()}`,
+      id: `sih-step-12-${Date.now()}`,
       type: 'reroute_required',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Safer alternative calculated: Route B (+25m, LOW risk)',
-      description: rec.recommendedRoute.safetyJustification,
+      title: 'STAGE 12: Alternative Route calculated: Route B (+25m, LOW risk)',
+      description: 'Route B (Bhalukpong Bypass): 235 km, 5h 25m, Risk 18%. 25 minutes slower but significantly safer.',
       entityId: 'TRK-102',
       severity: 'WARNING',
       source: 'LIVE',
     });
     await t(1200);
 
-    // Step 10: Operator approves reroute
+    // Step 13: Operator approves safer route
+    setDemoState(prev => ({ ...prev, currentStep: 13 }));
     rec.status = 'APPROVED';
     await publishRerouteDecision(rec);
     setActiveReroute({ ...rec });
     await publishSystemEvent({
-      id: `sih-step-10-${Date.now()}`,
+      id: `sih-step-13-${Date.now()}`,
       type: 'reroute_approved',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Operator approves Route B reroute order',
-      description: 'Command Center dispatcher authorized diversion. Dispatch packet transmitted to TRK-102 terminal.',
+      title: 'STAGE 13: Command Center Operator approves Route B',
+      description: 'Dispatcher authorized diversion order. Transmission packet pushed to TRK-102 mobile terminal.',
       entityId: 'TRK-102',
       severity: 'INFO',
       source: 'LIVE',
     });
     await t(1000);
 
-    // Step 11 & 12: Driver receives route & live GPS continues updating
+    // Step 14: Vehicle receives updated route
+    setDemoState(prev => ({ ...prev, currentStep: 14 }));
     setVehicles((prev) =>
       prev.map((v) =>
         v.id === 'TRK-102'
@@ -2057,17 +2181,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               heading: 70,
               risk: 18,
               status: 'MOVING',
+              freshnessText: 'LIVE — 2 sec ago',
+              freshnessCategory: 'LIVE',
             }
           : v
       )
     );
     await publishSystemEvent({
-      id: `sih-step-11-${Date.now()}`,
+      id: `sih-step-14-${Date.now()}`,
       type: 'reroute_sent_to_driver',
       timestamp: nowTime(),
       timestampMs: Date.now(),
-      title: 'Driver received updated Route B on terminal',
-      description: 'TRK-102 entered Southern Bypass corridor. Disruption avoided; delivery timeline secured.',
+      title: 'STAGE 14: Driver receives updated Route B on terminal',
+      description: 'Turn-by-turn guidance diverted to Bhalukpong corridor. Hazard perimeter bypassed safely.',
+      entityId: 'TRK-102',
+      severity: 'INFO',
+      source: 'LIVE',
+    });
+    await t(1000);
+
+    // Step 15: Live GPS continues tracking the vehicle
+    setDemoState(prev => ({ ...prev, currentStep: 15, isRunning: false }));
+    setVehicles((prev) =>
+      prev.map((v) =>
+        v.id === 'TRK-102'
+          ? {
+              ...v,
+              currentLocation: { lat: 26.8500, lng: 92.2000 },
+              speed: 46,
+              heading: 340,
+              risk: 18,
+              status: 'MOVING',
+              freshnessText: 'LIVE — just now',
+              freshnessCategory: 'LIVE',
+            }
+          : v
+      )
+    );
+    await publishSystemEvent({
+      id: `sih-step-15-${Date.now()}`,
+      type: 'vehicle_location_updated',
+      timestamp: nowTime(),
+      timestampMs: Date.now(),
+      title: 'STAGE 15: Live GPS confirms safe transit along Route B',
+      description: 'TRK-102 traversing Bhalukpong valley. Zero delay to life-saving vaccine schedule. Complete intelligence loop executed.',
       entityId: 'TRK-102',
       severity: 'INFO',
       source: 'LIVE',

@@ -128,16 +128,18 @@ export function validateTelemetry(input: unknown): ValidationResult {
  */
 export function calculateFreshness(lastUpdatedMs: number | string | undefined): {
   text: string;
-  category: 'LIVE' | 'UPDATED' | 'STALE' | 'OFFLINE';
+  category: 'LIVE' | 'RECENT' | 'STALE' | 'OFFLINE';
   isLive: boolean;
   ageSeconds: number;
+  lastKnownLocationLabel: string;
 } {
   if (!lastUpdatedMs) {
     return {
       text: 'NO GPS DATA',
       category: 'OFFLINE',
       isLive: false,
-      ageSeconds: Infinity
+      ageSeconds: Infinity,
+      lastKnownLocationLabel: 'LAST KNOWN LOCATION (No fix recorded)',
     };
   }
 
@@ -150,45 +152,48 @@ export function calculateFreshness(lastUpdatedMs: number | string | undefined): 
       text: 'INVALID TIMESTAMP',
       category: 'OFFLINE',
       isLive: false,
-      ageSeconds: Infinity
+      ageSeconds: Infinity,
+      lastKnownLocationLabel: 'LAST KNOWN LOCATION (Invalid timestamp)',
     };
   }
 
   const ageMs = Math.max(0, Date.now() - timestamp);
   const ageSec = Math.floor(ageMs / 1000);
+  const min = Math.floor(ageSec / 60);
+  const hrs = (min / 60).toFixed(1);
+  const timeLabel = min >= 120 ? `${hrs} hrs ago` : `${min} min ago`;
 
-  if (ageSec <= 12) {
+  if (ageSec <= 15) {
     return {
-      text: `LIVE — ${ageSec} sec ago`,
+      text: `LIVE — ${ageSec || 1} sec ago`,
       category: 'LIVE',
       isLive: true,
-      ageSeconds: ageSec
+      ageSeconds: ageSec,
+      lastKnownLocationLabel: `Live fix (${ageSec}s ago)`,
     };
-  } else if (ageSec < 180) {
-    const min = Math.max(1, Math.floor(ageSec / 60));
+  } else if (ageSec <= 60) {
     return {
-      text: `UPDATED — ${min} min ago`,
-      category: 'UPDATED',
+      text: `RECENT — ${ageSec} sec ago`,
+      category: 'RECENT',
       isLive: false,
-      ageSeconds: ageSec
+      ageSeconds: ageSec,
+      lastKnownLocationLabel: `Recent fix (${ageSec}s ago)`,
     };
-  } else if (ageSec < 1200) {
-    const min = Math.floor(ageSec / 60);
+  } else if (ageSec < 900) {
     return {
-      text: `STALE — ${min} min ago`,
+      text: `STALE — ${Math.max(1, min)} min ago`,
       category: 'STALE',
       isLive: false,
-      ageSeconds: ageSec
+      ageSeconds: ageSec,
+      lastKnownLocationLabel: `LAST KNOWN LOCATION (${min} min ago)`,
     };
   } else {
-    const min = Math.floor(ageSec / 60);
-    const hrs = (min / 60).toFixed(1);
-    const timeLabel = min >= 120 ? `${hrs} hrs ago` : `${min} min ago`;
     return {
-      text: `LAST KNOWN LOCATION (${timeLabel})`,
+      text: `OFFLINE — ${timeLabel}`,
       category: 'OFFLINE',
       isLive: false,
-      ageSeconds: ageSec
+      ageSeconds: ageSec,
+      lastKnownLocationLabel: `LAST KNOWN LOCATION (${timeLabel})`,
     };
   }
 }
