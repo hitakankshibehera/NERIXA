@@ -97,6 +97,8 @@ export const NER_STATES = [
 export const VEHICLE_STATUS_COLORS: Record<string, string> = {
   MOVING: '#22c55e',
   IDLE: '#6b7280',
+  STOPPED: '#9ca3af',
+  OFFLINE: '#4b5563',
   DELAYED: '#eab308',
   AT_RISK: '#f97316',
   DELIVERED: '#3b82f6',
@@ -115,6 +117,7 @@ export const DEFAULT_RISK_WEIGHTS = {
 // --- Map Layer IDs ---
 export const MAP_LAYERS = [
   { id: 'roads',           label: 'Roads',              icon: '●',  defaultOn: true },
+  { id: 'traffic',         label: 'Traffic Layer',      icon: '●',  defaultOn: false },
   { id: 'bridges',         label: 'Bridges',            icon: '●',  defaultOn: true },
   { id: 'districts',       label: 'Districts',          icon: '●',  defaultOn: false },
   { id: 'vehicles',        label: 'Vehicles',           icon: '●',  defaultOn: true },

@@ -11,7 +11,7 @@ export type UserRole = 'SUPER_ADMIN' | 'STATE_ADMIN' | 'DISTRICT_OFFICER' | 'FIE
 
 export type RoadStatus = 'OPEN' | 'PARTIALLY_BLOCKED' | 'BLOCKED' | 'UNDER_MAINTENANCE' | 'CRITICAL';
 
-export type VehicleStatus = 'MOVING' | 'IDLE' | 'DELAYED' | 'AT_RISK' | 'DELIVERED' | 'EMERGENCY';
+export type VehicleStatus = 'MOVING' | 'IDLE' | 'STOPPED' | 'OFFLINE' | 'EMERGENCY' | 'DELAYED' | 'AT_RISK' | 'DELIVERED';
 
 export type ShipmentStatus = 'PLANNED' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELAYED' | 'AT_RISK' | 'DELIVERED' | 'CANCELLED';
 
@@ -161,6 +161,15 @@ export interface Vehicle {
   shipmentIds: string[];
   risk: number; // 0-100
   lastUpdated: string;
+  // Real-time GPS & Telemetry fields
+  accuracy?: number; // meters
+  tripId?: string;
+  driverId?: string;
+  isRealDevice?: boolean;
+  isQueuedHistorical?: boolean;
+  lastPingTimestamp?: number; // unix ms
+  freshnessText?: string;
+  freshnessCategory?: 'LIVE' | 'UPDATED' | 'STALE' | 'OFFLINE';
 }
 
 export interface Shipment {
@@ -473,3 +482,137 @@ export type SupportedLanguage = 'en' | 'hi' | 'as' | 'bn' | 'brx' | 'kha' | 'mni
 export interface Translation {
   [key: string]: string | Translation;
 }
+
+// --- Real-Time Architecture & Transportation Data ---
+
+export type OperationalMode = 'LIVE_DATA' | 'DEMO_SIMULATION';
+
+export interface VehicleTelemetry {
+  vehicle_id: string;
+  latitude: number;
+  longitude: number;
+  speed: number;
+  heading: number;
+  accuracy: number;
+  timestamp: number; // unix ms
+  trip_id?: string;
+  driver_id?: string;
+  driver_name?: string;
+  status: VehicleStatus;
+  is_queued_historical?: boolean;
+  source: 'REAL_DEVICE' | 'DEMO_SIMULATION';
+}
+
+export type DataSourceType =
+  | 'GPS_FLEET'
+  | 'GOOGLE_TRAFFIC'
+  | 'GOOGLE_ROUTES'
+  | 'WEATHER'
+  | 'SENTINEL_1'
+  | 'SENTINEL_2'
+  | 'FIELD_OFFICERS'
+  | 'ROAD_NETWORK'
+  | 'PUBLIC_TRANSIT';
+
+export interface DataSourceStatus {
+  id: DataSourceType;
+  name: string;
+  category: string;
+  connected: boolean;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR' | 'UNAVAILABLE' | 'SYNCING';
+  lastUpdated: string | null;
+  freshnessLabel: string;
+  recordsReceived: number;
+  errorMessage?: string;
+  isRealtime: boolean;
+  notes?: string;
+}
+
+export type SystemEventType =
+  | 'vehicle_location_updated'
+  | 'vehicle_offline'
+  | 'vehicle_emergency'
+  | 'route_deviation'
+  | 'incident_created'
+  | 'risk_changed'
+  | 'road_blocked'
+  | 'shipment_at_risk'
+  | 'reroute_required'
+  | 'reroute_approved'
+  | 'reroute_sent_to_driver'
+  | 'field_report_received'
+  | 'satellite_observation_processed'
+  | 'weather_warning_received';
+
+export interface LiveSystemEvent {
+  id: string;
+  type: SystemEventType;
+  timestamp: string; // HH:mm:ss or ISO
+  timestampMs: number;
+  title: string;
+  description: string;
+  entityId?: string;
+  severity: 'INFO' | 'WARNING' | 'CRITICAL';
+  source: 'LIVE' | 'DEMO';
+  metadata?: Record<string, unknown>;
+}
+
+export interface RerouteRecommendation {
+  id: string;
+  vehicleId: string;
+  shipmentId?: string;
+  createdAt: string;
+  status: 'RECOMMENDED' | 'APPROVED' | 'REJECTED' | 'DISPATCHED_TO_DRIVER';
+  originalRoute: {
+    name: string;
+    distanceKm: number;
+    durationMinutes: number;
+    trafficCondition: 'Light' | 'Moderate' | 'Heavy';
+    riskLevel: RiskLevel;
+    riskScore: number;
+    polyline: GeoPoint[];
+    identifiedHazards: string[];
+  };
+  recommendedRoute: {
+    name: string;
+    distanceKm: number;
+    durationMinutes: number;
+    trafficCondition: 'Light' | 'Moderate' | 'Heavy';
+    riskLevel: RiskLevel;
+    riskScore: number;
+    polyline: GeoPoint[];
+    safetyJustification: string;
+  };
+  decisionRationale: string;
+}
+
+export interface SpatialIncidentImpact {
+  incidentId: string;
+  hazardType: IncidentType;
+  matchedRoadId?: string;
+  matchedRoadName?: string;
+  affectedRoadIds: string[];
+  affectedVehicles: Array<{
+    vehicleId: string;
+    vehicleNumber: string;
+    driverName: string;
+    distanceToHazardKm: number;
+    isApproaching: boolean;
+    estimatedTimeToHazardMinutes: number;
+  }>;
+  affectedShipments: Array<{
+    shipmentId: string;
+    commodityName: string;
+    priority: ShipmentPriority;
+    supplyCriticality: number;
+    vehicleId: string;
+  }>;
+  affectedCriticalFacilities: Array<{
+    type: 'HOSPITAL' | 'WAREHOUSE';
+    name: string;
+    distanceKm: number;
+  }>;
+  riskScoreDelta: number;
+  recommendedAction: string;
+}
+

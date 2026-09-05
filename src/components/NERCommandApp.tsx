@@ -14,6 +14,11 @@ import dynamic from 'next/dynamic';
 import WeatherTelemetryModal from '@/components/WeatherTelemetryModal';
 import ImageIntelligenceHub from '@/components/ImageIntelligenceHub';
 import SatelliteIntelligenceHub from '@/components/SatelliteIntelligenceHub';
+import { DriverTrackingModal } from '@/components/fleet/DriverTrackingModal';
+import { DataSourcesPanel } from '@/components/fleet/DataSourcesPanel';
+import { LiveEventTimeline } from '@/components/fleet/LiveEventTimeline';
+import { FieldEvidenceModal } from '@/components/fleet/FieldEvidenceModal';
+import { calculateFreshness } from '@/lib/fleet/telemetryValidator';
 import {
   ShieldIcon,
   DashboardIcon,
@@ -400,20 +405,46 @@ function Header({
   onOpenWeatherModal, 
   onNavigate,
   portalRole = 'CUSTOMER',
+  onOpenDriverModal,
+  onOpenDataSources,
+  onOpenTimeline,
+  onOpenFieldEvidence,
 }: { 
   onCommanderToggle: () => void; 
   commanderOpen: boolean; 
   onOpenWeatherModal?: () => void; 
   onNavigate?: (page: string) => void;
   portalRole?: PortalRole;
+  onOpenDriverModal?: () => void;
+  onOpenDataSources?: () => void;
+  onOpenTimeline?: () => void;
+  onOpenFieldEvidence?: () => void;
 }) {
-  const { user, logout, toggleTheme, theme, language, setLanguage, startDemo, pauseDemo, resetDemo, demoState, liveWeatherReports, triggerHackathonImageScenario, runSatelliteFloodScenario, firebaseConnected } = useApp();
-  const config = PORTAL_CONFIGS[portalRole] || PORTAL_CONFIGS.CUSTOMER;
+  const {
+    user,
+    logout,
+    toggleTheme,
+    theme,
+    language,
+    setLanguage,
+    liveWeatherReports,
+    triggerHackathonImageScenario,
+    runSatelliteFloodScenario,
+    firebaseConnected,
+    operationalMode,
+    setOperationalMode,
+    triggerSihDemoFlow,
+    demoState,
+    startDemo,
+    pauseDemo,
+    resetDemo,
+  } = useApp();
   const topStation = liveWeatherReports.length > 0 ? liveWeatherReports[0] : null;
+  const config = PORTAL_CONFIGS[portalRole] || PORTAL_CONFIGS.CUSTOMER;
 
   return (
     <header className="app-header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 8px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.2)' }}>
           <ShieldIcon size={15} color="#38bdf8" />
           <span style={{ fontSize: '0.8125rem', fontWeight: 700, letterSpacing: '0.04em', color: '#f8fafc' }}>
@@ -428,9 +459,60 @@ function Header({
           </span>
         </div>
 
-        <div style={{ display: 'none', alignItems: 'center', gap: '6px', fontSize: '0.6875rem', color: '#64748b', fontFamily: 'var(--font-mono)' }} className="lg:flex">
-          <PulseDotIcon color="#10b981" size={7} />
-          <span>SYS.ONLINE 10Hz</span>
+        {/* Section 16: Two Explicit System Modes */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            background: 'rgba(8, 12, 22, 0.85)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '6px',
+            padding: '2px',
+          }}
+          title="Section 16: Explicit System Mode (Live Hardware Data vs Clearly Labelled Demo)"
+        >
+          <button
+            onClick={() => setOperationalMode('LIVE_DATA')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono)',
+              border: 'none',
+              cursor: 'pointer',
+              background: operationalMode === 'LIVE_DATA' ? 'rgba(16, 185, 129, 0.22)' : 'transparent',
+              color: operationalMode === 'LIVE_DATA' ? '#10b981' : '#64748b',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', boxShadow: operationalMode === 'LIVE_DATA' ? '0 0 6px #10b981' : 'none' }} />
+            <span>LIVE DATA</span>
+          </button>
+          <button
+            onClick={() => setOperationalMode('DEMO_SIMULATION')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono)',
+              border: 'none',
+              cursor: 'pointer',
+              background: operationalMode === 'DEMO_SIMULATION' ? 'rgba(245, 158, 11, 0.22)' : 'transparent',
+              color: operationalMode === 'DEMO_SIMULATION' ? '#f59e0b' : '#64748b',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
+            <span>DEMO SIMULATION</span>
+          </button>
         </div>
 
         <div style={{ display: 'none', alignItems: 'center', gap: '5px', fontSize: '0.6875rem', color: firebaseConnected ? '#38bdf8' : '#94a3b8', fontFamily: 'var(--font-mono)', padding: '2px 6px', borderRadius: '4px', background: 'rgba(56, 189, 248, 0.05)', border: '1px solid rgba(56, 189, 248, 0.15)' }} className="lg:flex" title="Firebase Realtime Database (nerixa-2e6f6)">
@@ -441,7 +523,125 @@ function Header({
 
       <div style={{ flex: 1 }} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        {/* Section 23: SIH 13-Step Demonstartion Trigger */}
+        <button
+          className="btn btn-sm"
+          onClick={() => triggerSihDemoFlow()}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            borderColor: 'rgba(234, 179, 8, 0.45)',
+            color: '#facc15',
+            background: 'rgba(234, 179, 8, 0.12)',
+            fontSize: '0.6875rem',
+            fontWeight: 800,
+            padding: '0.35rem 0.75rem',
+            borderRadius: '6px',
+            boxShadow: '0 0 12px rgba(234, 179, 8, 0.15)',
+          }}
+          title="Execute Section 23 SIH Demonstration Scenario (TRK-102 Realtime End-to-End Walkthrough)"
+        >
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#facc15', animation: 'pulse 1.5s infinite' }} />
+          <span>SIH 13-STEP DEMO</span>
+        </button>
+
+        {/* Section 1 & 2: Real GPS Driver Tracking Cockpit */}
+        {onOpenDriverModal && (
+          <button
+            className="btn btn-sm"
+            onClick={onOpenDriverModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: 'rgba(56, 189, 248, 0.4)',
+              color: '#38bdf8',
+              background: 'rgba(56, 189, 248, 0.1)',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              padding: '0.35rem 0.65rem',
+              borderRadius: '6px',
+            }}
+            title="Open Driver Hardware GPS Tracking Interface"
+          >
+            <TruckIcon size={14} color="#38bdf8" />
+            <span>DRIVER GPS (TRK-102)</span>
+          </button>
+        )}
+
+        {/* Section 17: Data Sources Stream Panel */}
+        {onOpenDataSources && (
+          <button
+            className="btn btn-sm"
+            onClick={onOpenDataSources}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: 'rgba(16, 185, 129, 0.4)',
+              color: '#34d399',
+              background: 'rgba(16, 185, 129, 0.1)',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              padding: '0.35rem 0.65rem',
+              borderRadius: '6px',
+            }}
+            title="Inspect Real-Time Data Sources & Health"
+          >
+            <RadarIcon size={14} color="#34d399" />
+            <span>DATA STREAMS</span>
+          </button>
+        )}
+
+        {/* Section 19: Live Event Timeline */}
+        {onOpenTimeline && (
+          <button
+            className="btn btn-sm"
+            onClick={onOpenTimeline}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: 'rgba(168, 85, 247, 0.4)',
+              color: '#c084fc',
+              background: 'rgba(168, 85, 247, 0.1)',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              padding: '0.35rem 0.65rem',
+              borderRadius: '6px',
+            }}
+            title="Audited Live System Event Timeline"
+          >
+            <PulseDotIcon color="#c084fc" size={7} />
+            <span>TIMELINE</span>
+          </button>
+        )}
+
+        {/* Section 10: Field Evidence Modal */}
+        {onOpenFieldEvidence && (
+          <button
+            className="btn btn-sm"
+            onClick={onOpenFieldEvidence}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderColor: 'rgba(249, 115, 22, 0.4)',
+              color: '#fb923c',
+              background: 'rgba(249, 115, 22, 0.1)',
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              padding: '0.35rem 0.65rem',
+              borderRadius: '6px',
+            }}
+            title="Field Officer Camera & GPS Incident Uplink"
+          >
+            <CameraIcon size={14} color="#fb923c" />
+            <span>FIELD REPORT</span>
+          </button>
+        )}
         {!config.isCustomer && (
           <>
             <button
@@ -1152,8 +1352,39 @@ function RealityReconPage({ onNavigate }: { onNavigate: (page: string) => void }
 }
 
 // ── Dashboard Page (Elevated Command Center) ──
-function DashboardPage({ onNavigate, onOpenWeatherModal }: { onNavigate: (page: string) => void; onOpenWeatherModal?: () => void }) {
-  const { dashboardSummary, alerts, language, liveWeatherReports } = useApp();
+function DashboardPage({
+  onNavigate,
+  onOpenWeatherModal,
+  onOpenDriverModal,
+  onOpenDataSources,
+  onOpenTimeline,
+  onOpenFieldEvidence,
+}: {
+  onNavigate: (page: string) => void;
+  onOpenWeatherModal?: () => void;
+  onOpenDriverModal?: () => void;
+  onOpenDataSources?: () => void;
+  onOpenTimeline?: () => void;
+  onOpenFieldEvidence?: () => void;
+}) {
+  const {
+    dashboardSummary,
+    alerts,
+    language,
+    liveWeatherReports,
+    vehicles,
+    roads,
+    shipments,
+    incidents,
+    riskPredictions,
+    activeReroute,
+    approveReroute,
+    rejectReroute,
+    operationalMode,
+    setOperationalMode,
+    triggerSihDemoFlow,
+  } = useApp();
+
   const [activeMode, setActiveMode] = useState<'NORMAL' | 'DISASTER' | 'HIGH_ALERT'>('DISASTER');
   const [realityModalOpen, setRealityModalOpen] = useState(false);
   const [realityFeedIndex, setRealityFeedIndex] = useState(0);
@@ -1163,13 +1394,27 @@ function DashboardPage({ onNavigate, onOpenWeatherModal }: { onNavigate: (page: 
     return (levels[a.level] ?? 5) - (levels[b.level] ?? 5);
   });
 
-  const kpis = [
-    { label: t('dashboard.connectivity', language), value: dashboardSummary.nerConnectivity, unit: '%', color: dashboardSummary.nerConnectivity > 70 ? 'var(--risk-safe)' : 'var(--risk-high)' },
-    { label: t('dashboard.critical_roads', language), value: dashboardSummary.criticalRoads, color: 'var(--risk-critical)' },
-    { label: t('dashboard.high_risk', language), value: dashboardSummary.highRiskCorridors, color: 'var(--risk-high)' },
-    { label: t('dashboard.active_vehicles', language), value: dashboardSummary.activeVehicles, color: 'var(--accent-primary)' },
-    { label: t('dashboard.at_risk_shipments', language), value: dashboardSummary.atRiskShipments, color: 'var(--risk-moderate)' },
-    { label: t('dashboard.critical_alerts', language), value: dashboardSummary.criticalAlerts, color: 'var(--risk-critical)' },
+  // Section 18: Live Cards computed from actual backend data
+  const liveVehiclesCount = vehicles.length;
+  const movingVehiclesCount = vehicles.filter(v => v.status === 'MOVING').length;
+  const idleVehiclesCount = vehicles.filter(v => v.status === 'IDLE' || v.status === 'STOPPED').length;
+  const offlineVehiclesCount = vehicles.filter(v => v.status === 'OFFLINE' || calculateFreshness(v.lastPingTimestamp || v.lastUpdated).category === 'OFFLINE').length;
+  const emergencyVehiclesCount = vehicles.filter(v => v.status === 'EMERGENCY').length;
+  const activeIncidentsCount = incidents.filter(i => i.status !== 'RESOLVED').length;
+  const highRiskRoadsCount = roads.filter(r => (riskPredictions.get(r.id)?.currentRisk ?? 0) >= 60 || r.status === 'BLOCKED').length;
+  const criticalShipmentsCount = shipments.filter(s => s.priority === 'CRITICAL').length;
+  const activeAlertsCount = activeAlerts.length;
+
+  const section18Kpis = [
+    { label: 'LIVE VEHICLES', value: liveVehiclesCount, color: '#38bdf8' },
+    { label: 'MOVING', value: movingVehiclesCount, color: '#22c55e' },
+    { label: 'IDLE', value: idleVehiclesCount, color: '#6b7280' },
+    { label: 'OFFLINE', value: offlineVehiclesCount, color: '#94a3b8' },
+    { label: 'EMERGENCY', value: emergencyVehiclesCount, color: '#ef4444' },
+    { label: 'ACTIVE INCIDENTS', value: activeIncidentsCount, color: '#f87171' },
+    { label: 'HIGH-RISK ROADS', value: highRiskRoadsCount, color: '#f97316' },
+    { label: 'CRITICAL SHIPMENTS', value: criticalShipmentsCount, color: '#a855f7' },
+    { label: 'ACTIVE ALERTS', value: activeAlertsCount, color: '#ef4444' },
   ];
 
   return (
@@ -1197,21 +1442,42 @@ function DashboardPage({ onNavigate, onOpenWeatherModal }: { onNavigate: (page: 
               </span>
             </div>
             <div style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: '2px' }}>
-              Ministry of Development of North Eastern Region • 8 NER States Synchronized
+              Ministry of Development of North Eastern Region • 8 NER States Synchronized • Mode: <b style={{ color: operationalMode === 'LIVE_DATA' ? '#10b981' : '#f59e0b' }}>{operationalMode}</b>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          {/* Operator Load */}
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.625rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'var(--font-mono)' }}>
-              LOAD: <strong style={{ color: '#38bdf8' }}>18% OPTIMAL</strong>
-            </div>
-            <div style={{ width: '100px', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '3px' }}>
-              <div style={{ width: '18%', height: '100%', background: '#38bdf8' }} />
-            </div>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Action shortcuts */}
+          {onOpenDriverModal && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={onOpenDriverModal}
+              style={{ fontSize: '0.6875rem', color: '#38bdf8', borderColor: 'rgba(56, 189, 248, 0.3)' }}
+            >
+              Driver Cockpit
+            </button>
+          )}
+
+          {onOpenDataSources && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={onOpenDataSources}
+              style={{ fontSize: '0.6875rem', color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)' }}
+            >
+              Data Streams
+            </button>
+          )}
+
+          {onOpenTimeline && (
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={onOpenTimeline}
+              style={{ fontSize: '0.6875rem', color: '#c084fc', borderColor: 'rgba(168, 85, 247, 0.3)' }}
+            >
+              Live Timeline
+            </button>
+          )}
 
           {/* Mode Switcher */}
           <div className="ecc-mode-tabs">
@@ -1257,20 +1523,87 @@ function DashboardPage({ onNavigate, onOpenWeatherModal }: { onNavigate: (page: 
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="kpi-grid">
-        {kpis.map((kpi, i) => (
-          <div key={i} className="kpi-card" style={{ '--kpi-color': kpi.color } as React.CSSProperties}>
-            <div className="kpi-label">
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: kpi.color, display: 'inline-block' }} />
+      {/* Section 18: Live Command Center Cards Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+        gap: '0.625rem',
+        marginBottom: '1rem',
+      }}>
+        {section18Kpis.map((kpi, i) => (
+          <div
+            key={i}
+            className="kpi-card"
+            style={{
+              '--kpi-color': kpi.color,
+              padding: '0.625rem 0.75rem',
+              borderRadius: '8px',
+              background: 'rgba(15, 23, 42, 0.7)',
+              border: `1px solid ${kpi.color}33`,
+            } as React.CSSProperties}
+          >
+            <div className="kpi-label" style={{ fontSize: '0.625rem', letterSpacing: '0.05em' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: kpi.color, display: 'inline-block' }} />
               <span>{kpi.label}</span>
             </div>
-            <div className="kpi-value" style={{ color: kpi.color }}>
-              {kpi.value}{kpi.unit && <span className="kpi-unit">{kpi.unit}</span>}
+            <div className="kpi-value" style={{ color: kpi.color, fontSize: '1.25rem', fontWeight: 800 }}>
+              {kpi.value}
             </div>
           </div>
         ))}
       </div>
+
+      {/* Section 6 & 23: Active Reroute Advisory Banner */}
+      {activeReroute && (
+        <div style={{
+          marginBottom: '1rem',
+          padding: '12px 16px',
+          background: 'rgba(234, 179, 8, 0.08)',
+          border: '1px solid rgba(234, 179, 8, 0.4)',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          flexWrap: 'wrap',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b', animation: 'ping 1.5s infinite' }} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.8125rem', color: '#fde047' }}>
+                ACTIVE REROUTE ADVISORY: {activeReroute.vehicleId} ➔ {activeReroute.recommendedRoute.name}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#fef08a' }}>
+                {activeReroute.recommendedRoute.safetyJustification}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {activeReroute.status !== 'APPROVED' ? (
+              <button
+                className="btn btn-sm"
+                style={{ background: '#10b981', color: '#042f2e', fontWeight: 800, border: 'none', padding: '6px 14px', borderRadius: '6px' }}
+                onClick={() => approveReroute(activeReroute.id)}
+              >
+                ✓ Authorize Reroute Order
+              </button>
+            ) : (
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', background: 'rgba(16,185,129,0.15)', padding: '4px 10px', borderRadius: '6px', border: '1px solid rgba(16,185,129,0.3)' }}>
+                ✓ Transmitted to TRK-102 Driver Terminal
+              </span>
+            )}
+            <button
+              className="btn btn-outline btn-sm"
+              style={{ fontSize: '0.75rem', padding: '5px 10px' }}
+              onClick={() => rejectReroute(activeReroute.id)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Layout: Map + Alerts */}
       <div className="dashboard-grid">
@@ -2282,7 +2615,7 @@ export default function NERCommandApp({
   portalRole?: PortalRole;
   portalTitle?: string;
 }) {
-  const { user, isAuthenticated, theme } = useApp();
+  const { user, isAuthenticated, theme, dataSources, liveEvents, refreshStreamHealth } = useApp();
   const config = PORTAL_CONFIGS[portalRole] || PORTAL_CONFIGS.CUSTOMER;
 
   const [activePage, setActivePage] = useState('dashboard');
@@ -2290,6 +2623,12 @@ export default function NERCommandApp({
   const [realityModalOpen, setRealityModalOpen] = useState(false);
   const [realityFeedIndex, setRealityFeedIndex] = useState(0);
   const [weatherModalOpen, setWeatherModalOpen] = useState(false);
+
+  // Real-Time Fleet & Evidence Modals (Section 1, 10, 17, 19)
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
+  const [dataSourcesModalOpen, setDataSourcesModalOpen] = useState(false);
+  const [timelineModalOpen, setTimelineModalOpen] = useState(false);
+  const [fieldEvidenceModalOpen, setFieldEvidenceModalOpen] = useState(false);
 
   const handleOpenReality = (feedIdx = 0) => {
     setRealityFeedIndex(feedIdx);
@@ -2310,7 +2649,17 @@ export default function NERCommandApp({
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage onNavigate={setActivePage} onOpenWeatherModal={() => setWeatherModalOpen(true)} />;
+      case 'dashboard':
+        return (
+          <DashboardPage
+            onNavigate={setActivePage}
+            onOpenWeatherModal={() => setWeatherModalOpen(true)}
+            onOpenDriverModal={() => setDriverModalOpen(true)}
+            onOpenDataSources={() => setDataSourcesModalOpen(true)}
+            onOpenTimeline={() => setTimelineModalOpen(true)}
+            onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
+          />
+        );
       case 'satellite-intel': return <SatelliteIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'image-intel': return <ImageIntelligenceHub onNavigateRoutes={() => setActivePage('routes')} onOpenMap={() => setActivePage('map')} />;
       case 'reality': return <RealityReconPage onNavigate={setActivePage} />;
@@ -2323,7 +2672,17 @@ export default function NERCommandApp({
       case 'incidents': return <IncidentsPage onInspectReality={handleOpenReality} />;
       case 'alerts': return <AlertsPage />;
       case 'analytics': return <AnalyticsPage />;
-      default: return <DashboardPage onNavigate={setActivePage} onOpenWeatherModal={() => setWeatherModalOpen(true)} />;
+      default:
+        return (
+          <DashboardPage
+            onNavigate={setActivePage}
+            onOpenWeatherModal={() => setWeatherModalOpen(true)}
+            onOpenDriverModal={() => setDriverModalOpen(true)}
+            onOpenDataSources={() => setDataSourcesModalOpen(true)}
+            onOpenTimeline={() => setTimelineModalOpen(true)}
+            onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
+          />
+        );
     }
   };
 
@@ -2337,6 +2696,10 @@ export default function NERCommandApp({
           onOpenWeatherModal={() => setWeatherModalOpen(true)}
           onNavigate={setActivePage}
           portalRole={portalRole}
+          onOpenDriverModal={() => setDriverModalOpen(true)}
+          onOpenDataSources={() => setDataSourcesModalOpen(true)}
+          onOpenTimeline={() => setTimelineModalOpen(true)}
+          onOpenFieldEvidence={() => setFieldEvidenceModalOpen(true)}
         />
         <main className="app-content">
           {renderPage()}
@@ -2357,6 +2720,29 @@ export default function NERCommandApp({
           onNavigateRoutes={() => setActivePage('routes')}
         />
       )}
+
+      {/* Real-time Fleet & Intelligence Modals */}
+      <DriverTrackingModal
+        vehicleId="TRK-102"
+        driverName="Rajesh Sharma (Mobile Terminal)"
+        isOpen={driverModalOpen}
+        onClose={() => setDriverModalOpen(false)}
+      />
+      <DataSourcesPanel
+        sources={dataSources}
+        isOpen={dataSourcesModalOpen}
+        onClose={() => setDataSourcesModalOpen(false)}
+        onRefresh={refreshStreamHealth}
+      />
+      <LiveEventTimeline
+        events={liveEvents}
+        isOpen={timelineModalOpen}
+        onClose={() => setTimelineModalOpen(false)}
+      />
+      <FieldEvidenceModal
+        isOpen={fieldEvidenceModalOpen}
+        onClose={() => setFieldEvidenceModalOpen(false)}
+      />
     </div>
   );
 }
